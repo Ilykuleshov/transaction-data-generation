@@ -1,6 +1,8 @@
 # Out-Of-Distribution Detection for Event Sequences
 
-**Authors:** Belousov Nikita, Ulyanova Maria
+**Student:** Belousov Nikita
+
+**Scientific advisor:** Zaytsev Alexey
 
 ## Problem
 
