@@ -9,7 +9,7 @@ from torch import Tensor
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS, STEP_OUTPUT, EPOCH_OUTPUT
+from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS, STEP_OUTPUT
 
 
 def init_weights(m):
@@ -83,7 +83,7 @@ class LSTMAutoEncoder(LightningModule):
         self.log('train_loss', loss, on_step=False, on_epoch=True, prog_bar=True)
         return {'loss': loss}
 
-    def training_epoch_end(self, outputs: EPOCH_OUTPUT) -> None:
+    def training_epoch_end(self, outputs: Any) -> None:
         self.log('train_time', time.time() - self.time_start, prog_bar=True)
 
     def validation_step(self, batch: Tensor, *args, **kwargs) -> Optional[STEP_OUTPUT]:

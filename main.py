@@ -1,9 +1,16 @@
 import os
+import logging
+
+import hydra
+from omegaconf import OmegaConf, DictConfig
 
 from pytorch_lightning import Trainer, loggers
 import torch
 
 from src import Conv1dAutoEncoder, LSTMAutoEncoder, TransactionDataModuleNewData, LSTMAutoEncoderEmbed
+from src.utils.logging_utils import get_logger
+
+logger = get_logger(name=__name__)
 
 
 def test_lstm_network(train_dataset):
@@ -48,7 +55,16 @@ def test_lstm_freeze(train_dataset):
     trainer.test(model, dm)
 
 
+@hydra.main(config_path='config', config_name='config', version_base=None)
+def main(cfg: DictConfig) -> None:
+    print(cfg)
+    logger.info('test')
+    logger.warning('test warning')
+
+
+
 if __name__ == '__main__':
-    data_folder = '.\\data\\normal\\'
-    #test_cae_network(data_folder)
-    test_lstm_freeze(data_folder)
+    # data_folder = '.\\data\\normal\\'
+    # test_cae_network(data_folder)
+    # test_lstm_freeze(data_folder)
+    main()

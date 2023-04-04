@@ -186,3 +186,5 @@ fabric.properties
 
 data/
 logs/
+outputs/
+multirun/
