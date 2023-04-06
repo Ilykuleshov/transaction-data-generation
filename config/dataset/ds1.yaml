@@ -1,3 +1,10 @@
 name: new_data
 dir_path: data/new_data
 ignore_existing_preproc: True
+preproc:
+  drop_currency: True
+  time_delta: 7
+  len_min: 40
+  len_max: 120
+anomaly_strategy: quantile
+percentile: .99

@@ -9,6 +9,7 @@ import torch
 
 from src import Conv1dAutoEncoder, LSTMAutoEncoder, TransactionDataModuleNewData, LSTMAutoEncoderEmbed
 from src.utils.logging_utils import get_logger
+from src.preprocessing.new_data_preprop import preprocessing
 
 logger = get_logger(name=__name__)
 
@@ -57,9 +58,8 @@ def test_lstm_freeze(train_dataset):
 
 @hydra.main(config_path='config', config_name='config', version_base=None)
 def main(cfg: DictConfig) -> None:
-    print(cfg)
-    logger.info('test')
-    logger.warning('test warning')
+    if cfg['dataset']['name'] == 'new_data':
+        preprocessing(cfg['dataset'])
 
 
 

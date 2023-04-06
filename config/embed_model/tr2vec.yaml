@@ -1,0 +1,10 @@
+name: tr2vec
+window_size: 10
+mcc_embed_size: 16
+data_split:
+  test_fraq: .2
+  val_frag: .2
+learning_params:
+  lr: .5
+  batch_size: 2000
+  max_epochs: 50

@@ -45,3 +45,4 @@ def split_into_samples(
         inplace=True
     )
     data.drop(columns='count_temp', axis=1, inplace=True)
+    data['sample_label'] = data['sample_label'].astype(np.int32)

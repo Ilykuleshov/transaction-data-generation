@@ -1,8 +1,4 @@
 defaults:
   - dataset: ds1
+  - embed_model: tr2vec
   - _self_
-
-test:
-  test1: 1
-  test2: '2'
-  test3: .3
