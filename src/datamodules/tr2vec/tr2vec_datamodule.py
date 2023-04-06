@@ -54,7 +54,8 @@ class T2VDatamodule(pl.LightningDataModule):
             self.batch_size,
             collate_fn=self.tr2vec_collate
         )
-    
+
+
     def test_dataloader(self) -> DataLoader:
         return DataLoader(
             self.test,
