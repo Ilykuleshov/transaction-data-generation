@@ -12,3 +12,6 @@ learning_params:
     patience: 2
   batch_size: 2000
   max_epochs: 50
+  early_stopping_params:
+    min_delta: .001
+    patience: 5
