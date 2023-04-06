@@ -1,5 +1,6 @@
 name: tr2vec
 window_size: 10
+num_iters: 5
 mcc_vocab_size: 377
 mcc_embed_size: 16
 data_split:
