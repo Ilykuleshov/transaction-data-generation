@@ -17,7 +17,7 @@ def train_tr2vec(cfg_preprop: DictConfig, cfg_model: DictConfig, api_token: str)
     seq_data = preprocessing(cfg_preprop)
 
     for i in cfg_model['num_iters']:
-        model = Transaction2VecJoint(cfg_preprop)
+        model = Transaction2VecJoint(cfg_model)
 
         datamodule = T2VDatamodule(cfg_model, seq_data)
 

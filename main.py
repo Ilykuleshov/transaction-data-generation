@@ -1,15 +1,12 @@
-import os
-import logging
-
 import hydra
-from omegaconf import OmegaConf, DictConfig
+from omegaconf import DictConfig
 
 from pytorch_lightning import Trainer, loggers
 import torch
 
 from src import Conv1dAutoEncoder, LSTMAutoEncoder, TransactionDataModuleNewData, LSTMAutoEncoderEmbed
 from src.utils.logging_utils import get_logger
-from src.preprocessing.new_data_preprop import preprocessing
+from src import train_tr2vec
 
 logger = get_logger(name=__name__)
 
@@ -58,13 +55,11 @@ def test_lstm_freeze(train_dataset):
 
 @hydra.main(config_path='config', config_name='config', version_base=None)
 def main(cfg: DictConfig) -> None:
-    if cfg['dataset']['name'] == 'new_data':
-        preprocessing(cfg['dataset'])
-
+    mode: str = cfg['task'].lower()
+    logger.info(f'Working mode - {mode}')
+    if mode == 'tr2vec':
+        train_tr2vec(cfg['embed_model'], cfg['dataset'])
 
 
 if __name__ == '__main__':
-    # data_folder = '.\\data\\normal\\'
-    # test_cae_network(data_folder)
-    # test_lstm_freeze(data_folder)
     main()

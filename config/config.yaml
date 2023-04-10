@@ -2,4 +2,5 @@ defaults:
   - dataset: ds1
   - embed_model: tr2vec
   - _self_
+task: tr2vec
 api_token: 
