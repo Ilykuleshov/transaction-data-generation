@@ -20,13 +20,35 @@ For install all packages run.
 pip install -r requirements.txt
 ```
 
+## Configs
+
+| Config           | Location                                    |
+| ---------------- | ------------------------------------------- |
+| Main config      | [config.yaml](/config/config.yaml)          |
+| Datasets         | [datasets](/config/dataset/)                |
+| Embedding models | [embed_model](/config/embed_model/)         |
+| Models           | [model](/config/model/)(UNDER CONSTRUCTION) |
+
+IMPORTANT!
+For now repo is on construction. Config launch is available only for tr2vec feature.
+
 ## Data
 
 You can find all of the necessary data in [here](https://disk.yandex.ru/d/pYijj1fHonHRSw).
 
+Now only one dataset is available (`new_data`). To begin experiments you need to place `transactions.parquet` file into `data/new_data` directory.
+
 ## Experiments
 
-Logs, model and results you can find [here](/lightning_logs).
+To launch experiments simply run the following command:
+
+```
+python main.py
+```
+
+with necessary config parameters.
+
+Logs, model and results you can find on my commet (tags with `diploma` suffix) [here](https://www.comet.com/nokiroki1#projects).
 
 ## Results
 
