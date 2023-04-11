@@ -1,6 +1,9 @@
 name: new_data
 dir_path: data/new_data
-ignore_existing_preproc: True
+ignore_existing_preproc: False
+user_column: user_id
+mcc_column: mcc_code
+transaction_amt_column: transaction_amt
 preproc:
   drop_currency: True
   time_delta: 7

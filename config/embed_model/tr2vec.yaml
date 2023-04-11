@@ -2,16 +2,17 @@ name: tr2vec
 window_size: 10
 num_iters: 5
 mcc_vocab_size: 377
-mcc_embed_size: 16
+mcc_embed_size: 128
 data_split:
   test_fraq: .2
-  val_frag: .2
+  val_fraq: .2
 learning_params:
-  lr: .5
+  num_workers: 4
+  lr: .05
   lr_scheduler_params:
     factor: .5
     patience: 2
-  batch_size: 2000
+  batch_size: 5000
   max_epochs: 50
   early_stopping_params:
     min_delta: .001

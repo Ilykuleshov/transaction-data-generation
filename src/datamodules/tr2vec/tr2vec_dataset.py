@@ -19,6 +19,7 @@ class T2VDataset(Dataset):
         self.id2offset = [] 
 
         self.window_size = window_size
+        mcc_sequences = [seq for seq in mcc_sequences if len(seq) > 1]
         lens = [len(seq) for seq in mcc_sequences]
 
         for seq_id, l in tqdm(enumerate(lens)):

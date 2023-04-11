@@ -113,7 +113,7 @@ def preprocessing(cfg: DictConfig) -> pd.DataFrame:
         logger.info('Done!')
         anomaly_samples = data_srt['target'].sum()
         normal_samples = data_srt.shape[0] - anomaly_samples
-        logger.info(f'Normal samples count - {normal_samples}. Anomaly Samples - {anomaly_samples}')
+        logger.info(f'Normal samples count - {int(normal_samples)}. Anomaly Samples - {int(anomaly_samples)}')
 
         data_srt.to_parquet(os.path.join(preproc_dir_path, 'preproc_dataset.parquet'))
 

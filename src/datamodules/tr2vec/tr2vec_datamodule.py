@@ -11,7 +11,7 @@ import pytorch_lightning as pl
 from omegaconf import DictConfig
 
 from .tr2vec_dataset import T2VDataset
-from utils.logging_utils import get_logger
+from src.utils.logging_utils import get_logger
 
 logger = get_logger(name=__name__)
 
@@ -22,6 +22,7 @@ class T2VDatamodule(pl.LightningDataModule):
         super().__init__()
         self.window_size: int = cfg['window_size']
         self.batch_size: int = cfg['learning_params']['batch_size']
+        self.num_workers: int = cfg['learning_params']['num_workers']
 
         logger.info('Making raw sequences')
         sequences = [torch.LongTensor(seq) for seq in sequences]
@@ -44,7 +45,8 @@ class T2VDatamodule(pl.LightningDataModule):
             self.train,
             self.batch_size,
             True,
-            collate_fn=self.tr2vec_collate
+            collate_fn=self.tr2vec_collate,
+            num_workers=self.num_workers
         )
 
 
@@ -52,7 +54,8 @@ class T2VDatamodule(pl.LightningDataModule):
         return DataLoader(
             self.val,
             self.batch_size,
-            collate_fn=self.tr2vec_collate
+            collate_fn=self.tr2vec_collate,
+            num_workers=self.num_workers
         )
 
 
@@ -60,7 +63,8 @@ class T2VDatamodule(pl.LightningDataModule):
         return DataLoader(
             self.test,
             self.batch_size,
-            collate_fn=self.tr2vec_collate
+            collate_fn=self.tr2vec_collate,
+            num_workers=self.num_workers
         )
         
 

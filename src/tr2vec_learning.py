@@ -2,29 +2,28 @@ import os
 
 from omegaconf import DictConfig
 
-import torch
-
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import CometLogger
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
-from preprocessing.new_data_preprop import preprocessing
-from networks.tr2vec import Transaction2VecJoint
-from datamodules.tr2vec import T2VDatamodule
+import torch
+
+from src.preprocessing.new_data_preprop import preprocessing
+from src.networks.tr2vec import Transaction2VecJoint
+from src.datamodules.tr2vec import T2VDatamodule
 
 
 def train_tr2vec(cfg_preprop: DictConfig, cfg_model: DictConfig, api_token: str) -> None:
     seq_data = preprocessing(cfg_preprop)
-
-    for i in cfg_model['num_iters']:
+    for i in range(cfg_model['num_iters']):
         model = Transaction2VecJoint(cfg_model)
 
-        datamodule = T2VDatamodule(cfg_model, seq_data)
+        datamodule = T2VDatamodule(cfg_model, seq_data[cfg_preprop['mcc_column']])
 
         early_stopping_callback = EarlyStopping(
             monitor='val_loss',
             min_delta=cfg_model['learning_params']['early_stopping_params']['min_delta'],
-            min_delta=cfg_model['learning_params']['early_stopping_params']['patience'],
+            patience=cfg_model['learning_params']['early_stopping_params']['patience'],
             verbose=True,
             mode='min'
         )
@@ -46,12 +45,11 @@ def train_tr2vec(cfg_preprop: DictConfig, cfg_model: DictConfig, api_token: str)
         trainer = Trainer(
             accelerator='gpu',
             devices=1,
+            accumulate_grad_batches=5,
             log_every_n_steps=20,
             logger=comet_logger,
-            deterministic=True,
             callbacks=callbacks,
-            max_epochs=cfg_model['learning_params']['max_epochs'],
-            auto_lr_find=True
+            max_epochs=cfg_model['learning_params']['max_epochs']
         )
 
         trainer.fit(model, datamodule=datamodule)
@@ -62,8 +60,7 @@ def train_tr2vec(cfg_preprop: DictConfig, cfg_model: DictConfig, api_token: str)
         window_size: int = cfg_model['window_size']
 
         torch.save({
-                'mccs': model_best.mcc_embedding_layer.weight.data,
-                'hidden': model_best.mcc_output.weight.data
+                'mccs': model_best.mcc_embedding_layer.weight.data
             },
             os.path.join(
                 'logs',
