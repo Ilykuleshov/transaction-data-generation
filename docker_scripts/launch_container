@@ -1,0 +1,15 @@
+#! /bin/bash
+source credentials
+
+docker run \
+ -d \
+ -p ${CONTAINER_PORT}:8890 \
+ --shm-size=8g \
+ --memory=64g \
+ --cpus=8 \
+ --user ${DOCKER_USER_ID}:${DOCKER_GROUP_ID} \
+ --name belousov-od-detection \
+ --rm -it --init \
+ -v /home/n.belousov/out-of-distribution-ts-detection:/app \
+ --gpus all \
+ od-detection bash

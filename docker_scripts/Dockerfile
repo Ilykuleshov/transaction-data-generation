@@ -1,5 +1,7 @@
 FROM nvidia/cuda:11.3.1-base-ubuntu20.04
 
+
+
 # Remove any third-party apt sources to avoid issues with expiring keys.
 RUN rm -f /etc/apt/sources.list.d/*.list
 
@@ -26,16 +28,19 @@ RUN apt-get update && apt-get install -y \
 RUN mkdir /app
 WORKDIR /app
 
+ARG DOCKER_NAME
+ARG DOCKER_USER_ID
+ARG DOCKER_GROUP_ID
 
 USER root
-RUN groupadd -g 1019 n.belousov
+RUN groupadd -g $DOCKER_GROUP_ID $DOCKER_NAME
 
-RUN adduser --disabled-password --uid 1018 --gid 1019 --gecos '' --shell /bin/bash n.belousov \
- && chown -R n.belousov:n.belousov /app
-RUN echo "n.belousov ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90-n.belousov
-USER n.belousov
+RUN adduser --disabled-password --uid $DOCKER_USER_ID --gid $DOCKER_GROUP_ID --gecos '' --shell /bin/bash $DOCKER_NAME \
+ && chown -R $DOCKER_NAME:$DOCKER_NAME /app
+RUN echo "$DOCKER_NAME ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90-$DOCKER_NAME
+USER $DOCKER_NAME
 
-ENV HOME=/home/n.belousov
+ENV HOME=/home/$DOCKER_NAME
 
 
 
@@ -54,7 +59,5 @@ RUN curl -sLo ~/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-py39
  && rm /app/environment.yml \
  && conda clean -ya
 
-RUN pip install notebook
-RUN pip install jupyterlab
 # RUN git clone https://github.com/nokiroki/NLP-Transactions.git
 CMD jupyter notebook --allow-root --ip='0.0.0.0' --port=8890 --NotebookApp.token='' --NotebookApp.password=''

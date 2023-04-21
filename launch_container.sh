@@ -1,1 +1,0 @@
-docker run -d -p 8892:8890 --shm-size=8g --memory=64g --cpus=40 --user 1018:1019 --name belousov-od-detection --rm -it --init -v /home/n.belousov/out-of-distribution-ts-detection:/app --gpus "device=0" all od-detection bash
