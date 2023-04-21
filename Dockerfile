@@ -1,40 +1,58 @@
-FROM nvidia/cuda:11.4.0-cudnn8-devel-ubuntu18.04
+FROM nvidia/cuda:11.3.1-base-ubuntu20.04
 
+# Remove any third-party apt sources to avoid issues with expiring keys.
+RUN rm -f /etc/apt/sources.list.d/*.list
 
+ARG DEBIAN_FRONTEND=noninteractive
 # Install some basic utilities
-RUN apt-get update || true && apt-get install -y \
-    wget curl git git-lfs vim zip unzip tmux htop \
-    libglib2.0-0 libsm6 libxext6 libxrender-dev \
-    python3 python3-pip python3-venv \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    sox \
+    libsox-dev \
+    libsox-fmt-all \
+    build-essential \
+    ca-certificates \
+    sudo \
+    git \
+    bzip2 \
+    libx11-6 \
+    ffmpeg \
+    libsm6 \
+    libxext6 \
+ && rm -rf /var/lib/apt/lists/*
 
 # Create a working directory
 RUN mkdir /app
 WORKDIR /app
 
-# Create a non-root user and switch to it
-RUN adduser --disabled-password --gecos '' --shell /bin/bash user \
- && chown -R user:user /app
-#RUN echo "user ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90-user
 
-USER user
+USER root
+RUN groupadd -g 1019 n.belousov
 
-# All users can use /home/user as their home directory
-ENV HOME=/home/user
-RUN chmod 777 /home/user
+RUN adduser --disabled-password --uid 1018 --gid 1019 --gecos '' --shell /bin/bash n.belousov \
+ && chown -R n.belousov:n.belousov /app
+RUN echo "n.belousov ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90-n.belousov
+USER n.belousov
 
-# Install Miniconda and Python 3.8
-ENV CONDA_AUTO_UPDATE_CONDA=false
-ENV PATH=/home/user/miniconda/bin:$PATH
-RUN curl -sLo ~/miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-py38_4.8.2-Linux-x86_64.sh \
+ENV HOME=/home/n.belousov
+
+
+
+RUN mkdir $HOME/.cache $HOME/.config \
+ && chmod -R 777 $HOME
+
+# Set up the Conda environment
+ENV CONDA_AUTO_UPDATE_CONDA=false \
+    PATH=$HOME/miniconda/bin:$PATH
+COPY environment.yml /app/environment.yml
+RUN curl -sLo ~/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-py39_23.1.0-1-Linux-x86_64.sh \
  && chmod +x ~/miniconda.sh \
  && ~/miniconda.sh -b -p ~/miniconda \
  && rm ~/miniconda.sh \
- && conda install -y python==3.8.1 \
+ && conda env update -n base -f /app/environment.yml \
+ && rm /app/environment.yml \
  && conda clean -ya
-
-# Set the default command to python3
 
 RUN pip install notebook
 RUN pip install jupyterlab
