@@ -42,8 +42,6 @@ USER $DOCKER_NAME
 
 ENV HOME=/home/$DOCKER_NAME
 
-
-
 RUN mkdir $HOME/.cache $HOME/.config \
  && chmod -R 777 $HOME
 

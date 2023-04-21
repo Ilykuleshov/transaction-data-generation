@@ -4,7 +4,7 @@ from omegaconf import DictConfig
 from pytorch_lightning import Trainer, loggers
 import torch
 
-from src import Conv1dAutoEncoder, LSTMAutoEncoder, TransactionDataModuleNewData, LSTMAutoEncoderEmbed
+# from src import Conv1dAutoEncoder, LSTMAutoEncoder, TransactionDataModuleNewData, LSTMAutoEncoderEmbed
 from src.utils.logging_utils import get_logger
 from src import train_tr2vec
 

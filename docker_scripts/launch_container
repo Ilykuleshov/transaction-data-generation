@@ -12,4 +12,4 @@ docker run \
  --rm -it --init \
  -v /home/n.belousov/out-of-distribution-ts-detection:/app \
  --gpus all \
- od-detection bash
+ od-det bash
