@@ -20,6 +20,8 @@ class LSTMAE(LightningModule):
         num_layers: int,
         mcc_embed_dim: int,
         n_vocab_size: int,
+        freeze_embed: bool,
+        unfreeze_after: int,
         *args: typing.Any, **kwargs: typing.Any
     ) -> None:
         super().__init__(*args, **kwargs)
@@ -29,10 +31,16 @@ class LSTMAE(LightningModule):
             'embed_dim'     : embed_dim,
             'num_layers'    : num_layers,
             'mcc_embed_dim' : mcc_embed_dim,
-            'n_vocab_size'  : n_vocab_size
+            'n_vocab_size'  : n_vocab_size,
+            'freeze_embed'  : freeze_embed,
+            'unfreeze_after': unfreeze_after
         })
 
         self.mcc_embed = nn.Embedding(n_vocab_size + 1, mcc_embed_dim, padding_idx=0)
+        if freeze_embed:
+            with torch.no_grad():
+                self.mcc_embed.requires_grad_(False)
+
         self.pe = PositionalEncoding(mcc_embed_dim)
 
         self.encoder1 = nn.LSTM(
@@ -74,6 +82,9 @@ class LSTMAE(LightningModule):
     
     def on_train_epoch_start(self) -> None:
         self.train_time = time.time()
+        if self.hparams['freeze_embed'] and self.current_epoch == self.hparams['unfreeze_after']:
+            self.mcc_embed.requires_grad_(True)
+
         return super().on_train_epoch_start()
     
     def on_train_epoch_end(self) -> None:
