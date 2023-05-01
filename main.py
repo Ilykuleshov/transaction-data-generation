@@ -6,7 +6,7 @@ import torch
 
 # from src import Conv1dAutoEncoder, LSTMAutoEncoder, TransactionDataModuleNewData, LSTMAutoEncoderEmbed
 from src.utils.logging_utils import get_logger
-from src import train_tr2vec
+from src import train_tr2vec, train_lstm
 
 logger = get_logger(name=__name__)
 
@@ -63,6 +63,8 @@ def main(cfg: DictConfig) -> None:
     logger.info(f'Working mode - {mode}')
     if mode == 'tr2vec':
         train_tr2vec(cfg['dataset'], cfg['embed_model'], api_token)
+    elif mode == 'lstm':
+        train_lstm(cfg['dataset'], cfg['ae_model'], api_token)
 
 
 if __name__ == '__main__':

@@ -1,6 +1,7 @@
 defaults:
   - dataset: ds1
   - embed_model: tr2vec
+  - ae_model: lstm
   - _self_
-task: tr2vec
+task: lstm
 api_token: 
