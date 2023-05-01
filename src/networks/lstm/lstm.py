@@ -16,7 +16,6 @@ class LSTMAE(LightningModule):
 
     def __init__(
         self,
-        n_features: int,
         embed_dim: int,
         num_layers: int,
         mcc_embed_dim: int,
@@ -31,7 +30,6 @@ class LSTMAE(LightningModule):
         super().__init__(*args, **kwargs)
 
         self.save_hyperparameters({
-            'n_features'    : n_features,
             'embed_dim'     : embed_dim,
             'num_layers'    : num_layers,
             'mcc_embed_dim' : mcc_embed_dim,
@@ -42,6 +40,8 @@ class LSTMAE(LightningModule):
             'lr'            : lr,
             'weight_decay'  : weight_decay
         })
+
+        n_features = mcc_embed_dim + 2
 
         self.mcc_embed = nn.Embedding(
             n_vocab_size + 1,

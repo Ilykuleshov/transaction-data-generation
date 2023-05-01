@@ -1,0 +1,30 @@
+name: lstm
+num_iters: 1
+mcc_vocab_size: 377
+embed_dim: 32
+num_layers: 1
+loss_weights:
+  - .1
+  - 1
+  - 1
+freeze_embed: True
+unfreeze_after: 5
+
+data_split:
+  test_size: .2
+  val_size: .2
+tr2vec:
+  window_size: 10
+  mcc_embed_size: 32
+learning_params:
+  num_workers: 4
+  lr: .001
+  weight_decay: .00001
+  lr_schedule_params:
+    factor: .5
+    patience: 2
+  batch_size: 128
+  max_epochs: 50
+  early_stopping_params:
+    min_delta: .001
+    patience: 5

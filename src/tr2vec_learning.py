@@ -13,12 +13,16 @@ from src.networks.tr2vec import Transaction2VecJoint
 from src.datamodules.tr2vec import T2VDatamodule
 
 
-def train_tr2vec(cfg_preprop: DictConfig, cfg_model: DictConfig, api_token: str) -> None:
+def train_tr2vec(
+    cfg_preprop: DictConfig, cfg_model: DictConfig, api_token: str
+)-> None:
     seq_data = preprocessing(cfg_preprop)
     for i in range(cfg_model['num_iters']):
         model = Transaction2VecJoint(cfg_model)
 
-        datamodule = T2VDatamodule(cfg_model, seq_data[cfg_preprop['mcc_column']])
+        datamodule = T2VDatamodule(
+            cfg_model, seq_data[cfg_preprop['mcc_column']]
+        )
 
         early_stopping_callback = EarlyStopping(
             monitor='val_loss',
@@ -54,14 +58,15 @@ def train_tr2vec(cfg_preprop: DictConfig, cfg_model: DictConfig, api_token: str)
 
         trainer.fit(model, datamodule=datamodule)
 
-        model_best = Transaction2VecJoint.load_from_checkpoint(checkpoint.best_model_path)
+        model_best = Transaction2VecJoint.load_from_checkpoint(
+            checkpoint.best_model_path
+            )
 
         mcc_emb_size: int = cfg_model['mcc_embed_size']
         window_size: int = cfg_model['window_size']
 
-        torch.save({
-                'mccs': model_best.mcc_embedding_layer.weight.data
-            },
+        torch.save(
+            {'mccs': model_best.mcc_embedding_layer.weight.data},
             os.path.join(
                 'logs',
                 'data_weight',

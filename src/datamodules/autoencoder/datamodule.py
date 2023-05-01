@@ -26,6 +26,7 @@ class AEDataModule(LightningDataModule):
         train_val_ratio: float,
         batch_size:int,
         max_len: int,
+        num_workers: int,
         anomaly_fraq: float,
         only_normal: bool,
         binarize: bool,
@@ -40,6 +41,7 @@ class AEDataModule(LightningDataModule):
         self.transaction_amt_column = transaction_amt_column
         self.train_val_ratio        = train_val_ratio
         self.max_len                = max_len
+        self.num_workers            = num_workers
         self.batch_size             = batch_size
         self.anomaly_fraq           = anomaly_fraq
         self.only_normal            = only_normal
@@ -84,21 +86,24 @@ class AEDataModule(LightningDataModule):
             self.train,
             self.batch_size,
             shuffle=True,
-            collate_fn=self._collate_fn
+            collate_fn=self._collate_fn,
+            num_workers=self.num_workers
         )
     
     def val_dataloader(self) -> DataLoader:
         return DataLoader(
             self.val,
             self.batch_size,
-            collate_fn=self._collate_fn
+            collate_fn=self._collate_fn,
+            num_workers=self.num_workers
         )
     
     def test_dataloader(self) -> DataLoader:
         return DataLoader(
             self.test,
             self.batch_size,
-            collate_fn=self._collate_fn
+            collate_fn=self._collate_fn,
+            num_workers=self.num_workers
         )
 
     @staticmethod
