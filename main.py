@@ -64,7 +64,7 @@ def main(cfg: DictConfig) -> None:
     if mode == 'tr2vec':
         train_tr2vec(cfg['dataset'], cfg['embed_model'], api_token)
     elif mode == 'lstm':
-        train_lstm(cfg['dataset'], cfg['ae_model'], api_token)
+        train_lstm(cfg['dataset'], cfg['autoencoder'], api_token)
 
 
 if __name__ == '__main__':

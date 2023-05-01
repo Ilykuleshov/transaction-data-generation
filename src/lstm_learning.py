@@ -32,6 +32,7 @@ def train_lstm(
 
     for i in range(cfg_model['num_iters']):
         seq_data_train, seq_data_test = train_test_split(
+            seq_data,
             test_size=cfg_model['data_split']['test_size'],
             shuffle=True
         )
@@ -39,7 +40,7 @@ def train_lstm(
             cfg_model['embed_dim'],
             cfg_model['num_layers'],
             tr2vec_mcc_embed_size,
-            cfg_model['vocab_size'],
+            cfg_model['mcc_vocab_size'],
             cfg_model['loss_weights'],
             cfg_model['freeze_embed'],
             cfg_model['unfreeze_after'],
@@ -63,12 +64,12 @@ def train_lstm(
         )
 
         # Set pretrained weights
-        model.set_embeds(weights)
+        model.set_embeds(weights['mccs'])
 
         early_stop_callback = EarlyStopping(
             monitor='val_loss',
-            min_delta=cfg_model['early_stopping_params']['min_delta'],
-            patience=cfg_model['early_stopping_params']['patience'],
+            min_delta=cfg_model['learning_params']['early_stopping_params']['min_delta'],
+            patience=cfg_model['learning_params']['early_stopping_params']['patience'],
             verbose=True,
             mode='min'
         )
