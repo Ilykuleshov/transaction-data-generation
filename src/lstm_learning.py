@@ -101,7 +101,7 @@ def train_lstm(
             max_epochs=cfg_model['learning_params']['max_epochs']
         )
 
-        # Testing stageb
+        # Testing stage
         trainer.fit(model, datamodule=datamodule)
         model_best = LSTMAE.load_from_checkpoint(checkpoint.best_model_path)
         trainer.test(model_best, datamodule=datamodule)
