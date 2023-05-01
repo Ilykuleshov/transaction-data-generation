@@ -43,7 +43,11 @@ class LSTMAE(LightningModule):
             'weight_decay'  : weight_decay
         })
 
-        self.mcc_embed = nn.Embedding(n_vocab_size + 1, mcc_embed_dim, padding_idx=0)
+        self.mcc_embed = nn.Embedding(
+            n_vocab_size + 1,
+            mcc_embed_dim,
+            padding_idx=0
+        )
         if freeze_embed:
             with torch.no_grad():
                 self.mcc_embed.requires_grad_(False)
@@ -97,7 +101,8 @@ class LSTMAE(LightningModule):
     
     def on_train_epoch_start(self) -> None:
         self.train_time = time.time()
-        if self.hparams['freeze_embed'] and self.current_epoch == self.hparams['unfreeze_after']:
+        if self.hparams['freeze_embed'] \
+            and self.current_epoch == self.hparams['unfreeze_after']:
             self.mcc_embed.requires_grad_(True)
 
         return super().on_train_epoch_start()
@@ -106,7 +111,13 @@ class LSTMAE(LightningModule):
         train_time = time.time() - self.train_time
         train_time = str(timedelta(seconds=train_time))
 
-        self.log('train_time', train_time, prog_bar=True, on_step=False, on_epoch=True)
+        self.log(
+            'train_time',
+            train_time,
+            prog_bar=True,
+            on_step=False,
+            on_epoch=True
+        )
         return super().on_train_epoch_end()
 
     def forward(
@@ -124,7 +135,8 @@ class LSTMAE(LightningModule):
         transaction_amt = torch.unsqueeze(transaction_amt, -1)
 
         mat_orig = torch.cat((mcc_embed, transaction_amt, is_income), -1)
-        # Pack sequnces to get a real hidden state no matter of difference in lengths
+        # Pack sequnces to get a real hidden state
+        # no matter of difference in lengths
         packed_mat = pack_padded_sequence(
             mat_orig,
             lengths.cpu(),
@@ -238,7 +250,17 @@ class LSTMAE(LightningModule):
         )
 
     def configure_optimizers(self) -> typing.Mapping[str, typing.Any]:
-        opt = torch.optim.AdamW(self.parameters(), self.hparams['lr'], weight_decay=self.hparams['weight_decay'])
-        scheduler =torch.optim.lr_scheduler.ReduceLROnPlateau( opt, 'min', 1e-1, 2, verbose=True)
+        opt = torch.optim.AdamW(
+            self.parameters(),
+            self.hparams['lr'],
+            weight_decay=self.hparams['weight_decay']
+        )
+        scheduler =torch.optim.lr_scheduler.ReduceLROnPlateau(
+            opt,
+            'min',
+            1e-1,
+            2,
+            verbose=True
+        )
         return {'optimizer': opt, 'scheduler': scheduler, 'monitor': 'val_loss'}
 
