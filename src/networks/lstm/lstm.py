@@ -2,6 +2,8 @@ import typing
 
 from pytorch_lightning import LightningModule
 
+import numpy as np
+
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -164,12 +166,11 @@ class LSTMAE(LightningModule):
         is_income_rec = torch.sigmoid(is_income_rec)
 
         mcc_rec, is_income_rec, amount_rec = self._trim_out_seq(
-            [mcc_rec, is_income_rec, amount_rec],
-            lengths
+            [mcc_rec, is_income_rec, amount_rec], mask
         )
 
-        # squeeze for income and amount is required to reduce last 1 dimension
-        return mcc_rec, is_income_rec.squeeze(), amount_rec.squeeze()
+        # squeeze for income and amount is required to reduce last dimension
+        return mcc_rec.permute((0, 2, 1)), is_income_rec.squeeze(), amount_rec.squeeze()
 
     def _compute_mask(self, lengths: torch.Tensor) -> torch.Tensor:
         max_length = lengths.max().detach().cpu().item()
@@ -196,9 +197,12 @@ class LSTMAE(LightningModule):
         is_income_orig: torch.Tensor,
         amt_orig: torch.Tensor,
         mask: torch.Tensor
-    ) -> None:
+    ) -> tuple[float, float, float, float]:
         with torch.no_grad():
             mcc_probs = torch.argmax(mcc_probs, 1)
+            # print(mcc_probs.shape)
+            # print(mask.shape)
+            mask.squeeze_()
             mcc_probs = mcc_probs.masked_select(mask)
             
             is_income_probs = is_income_probs.masked_select(mask)
@@ -210,45 +214,63 @@ class LSTMAE(LightningModule):
             is_income_orig = is_income_orig.masked_select(mask)
             amt_orig = amt_orig.masked_select(mask)
 
-            self.training_mcc_f1.append(f1(mcc_probs, mcc_orig, 'macro'))
-            self.training_binary_f1.append(
-                f1(is_income_labels, is_income_orig)
+            return (
+                f1(mcc_probs, mcc_orig, 'macro').item(),
+                f1(is_income_labels, is_income_orig).item(),
+                roc_auc(is_income_probs, is_income_orig).item(),
+                r2(amt_value, amt_orig).item()
             )
-            self.training_binary_rocauc.append(
-                roc_auc(is_income_probs, is_income_orig)
-            )
-            self.training_amt_r2.append(r2(amt_value, amt_orig))
-
 
     
-    def _calculate_losses(self, batch: tuple[
-        torch.LongTensor,
-        torch.LongTensor,
-        torch.LongTensor,
-        torch.DoubleTensor,
-        int,
-        float
-    ]) -> tuple[
-            float,
-            tuple[float, float, float],
-            tuple[torch.Tensor, torch.Tensor, torch.Tensor]
-        ]:
-        mcc_rec, is_income_rec, amount_rec = self(*batch[:-1])
-        mcc_rec = torch.permute(mcc_rec, (0, 2, 1))
+    def _calculate_losses(
+        self,
+        mcc_rec: torch.Tensor,
+        is_income_rec: torch.Tensor,
+        amount_rec: torch.Tensor,
+        mcc_orig: torch.Tensor,
+        is_income_orig: torch.Tensor,
+        amount_orig: torch.Tensor
+    ) -> tuple[float, tuple[float, float, float]]:
+        # Lengths tensor
         
-        mcc_loss = self.mcc_criterion(mcc_rec, batch[1])
-        binary_loss = self.binary_criterion(is_income_rec, batch[2])
-        amount_loss = self.amount_criterion(amount_rec, batch[3])
+        mcc_loss = self.mcc_criterion(mcc_rec, mcc_orig)
+        binary_loss = self.binary_criterion(is_income_rec, is_income_orig)
+        amount_loss = self.amount_criterion(amount_rec, amount_orig)
 
         total_loss = self.mcc_loss_weights * mcc_loss + \
             self.binary_loss_weights * binary_loss + \
             self.amount_loss_weights * amount_loss
         
-        return (
+        return (total_loss, (mcc_loss, binary_loss, amount_loss))
+    
+    def _all_forward_step(
+        self,
+        batch: tuple[
+            torch.LongTensor,
+            torch.LongTensor,
+            torch.LongTensor,
+            torch.DoubleTensor,
+            torch.Tensor,
+            torch.Tensor
+        ]
+    ):
+        mask = self._compute_mask(batch[-2])
+        mcc_rec, is_income_rec, amount_rec = self(*batch[:-1], mask)
+
+        total_loss, (mcc_loss, binary_loss, amount_loss) = self._calculate_losses(
+            mcc_rec, is_income_rec, amount_rec, *batch[1:4]
+        )
+
+        f1_mcc, f1_binary, rocauc_binary, r2_amount = self._calculate_metrics(
+            mcc_rec, is_income_rec, amount_rec, *batch[1:4], mask
+        )
+
+        return(
             total_loss,
             (mcc_loss, binary_loss, amount_loss),
-            (mcc_rec, is_income_rec, amount_rec)
+            (f1_mcc, f1_binary, rocauc_binary, r2_amount)
         )
+        
     
     def training_step(
         self,
@@ -257,50 +279,33 @@ class LSTMAE(LightningModule):
             torch.LongTensor,
             torch.LongTensor,
             torch.DoubleTensor,
-            int,
-            float
+            torch.Tensor,
+            torch.Tensor
         ],
         batch_idx: int
-    ) -> typing.Mapping[str, float]:
+    ) -> float:
         loss, \
-            (mcc_loss, binary_loss, amount_loss), \
-            (mcc_rec, is_income_rec, amount_rec) = self._calculate_losses(batch)
+        (mcc_loss, binary_loss, amount_loss), \
+        (f1_mcc, f1_binary, rocauc_binary, r2_amount) = self._all_forward_step(
+            batch
+        )
         self.log('train_loss', loss, prog_bar=True, on_step=True)
         self.log('train_loss_mcc', mcc_loss, on_step=True, prog_bar=False)
         self.log('train_loss_binary', binary_loss, on_step=True, prog_bar=False)
         self.log('train_loss_amt', amount_loss, on_step=True, prog_bar=False)
-        
-        mcc_rec = torch.argmax(mcc_rec, 1)
-        mcc_rec = mcc_rec.flatten()[mcc_rec.flatten().nonzero()].squeeze()
-        is_income_rec = is_income_rec.flatten()[
-            is_income_rec.flatten().nonzero()
-        ].squeeze()
-        amount_rec = amount_rec.flatten()[amount_rec.flatten().nonzero()].squeeze()
 
-        mcc_orig = batch[1].flatten()[batch[1].flatten().nonzero()].squeeze()
-        is_income_orig = batch[2].flatten()[batch[2].flatten().nonzero()].squeeze()
-        amount_orig = batch[3].flatten()[batch[3].flatten().nonzero()].squeeze()
-
-        print(is_income_rec)
-        print(is_income_orig)
-        print(is_income_rec.shape)
-        print(is_income_orig.shape)
-
-        self.training_mcc_f1.append(f1(mcc_rec, mcc_orig, 'macro'))
-        self.training_binary_f1.append(f1(is_income_rec >= .5, is_income_orig))
-        self.training_binary_rocauc.append(roc_auc(is_income_rec, is_income_orig))
-        self.training_amt_r2.append(r2(amount_rec, amount_orig))
+        self.training_mcc_f1.append(f1_mcc)
+        self.training_binary_f1.append(f1_binary)
+        self.training_binary_rocauc.append(rocauc_binary)
+        self.training_amt_r2.append(r2_amount)
 
         return loss
     
     def on_train_epoch_end(self) -> None:
-        self.log('train_mcc_f1', torch.stack(self.training_mcc_f1).mean())
-        self.log('train_binary_f1', torch.stack(self.training_binary_f1).mean())
-        self.log(
-            'train_binary_ROCAUC',
-            torch.stack(self.training_binary_rocauc).mean()
-        )
-        self.log('train_amt_r2', torch.stack(self.training_amt_r2).mean())
+        self.log('train_mcc_f1', np.mean(self.training_mcc_f1))
+        self.log('train_binary_f1', np.mean(self.training_binary_f1))
+        self.log('train_binary_ROCAUC', np.mean(self.training_binary_rocauc))
+        self.log('train_amt_r2', np.mean(self.training_amt_r2))
 
         self.training_mcc_f1.clear()
         self.training_binary_f1.clear()
@@ -320,9 +325,30 @@ class LSTMAE(LightningModule):
         batch_idx: int
     ) -> None:
         loss, \
-            (mcc_loss, binary_loss, amount_loss), \
-            (mcc_rec, is_income_rec, amount_rec) = self._calculate_losses(batch)
+        (mcc_loss, binary_loss, amount_loss), \
+        (f1_mcc, f1_binary, rocauc_binary, r2_amount) = self._all_forward_step(
+            batch
+        )
         self.log('val_loss', loss, prog_bar=True, on_step=False, on_epoch=True)
+        self.log('val_loss_mcc', mcc_loss, on_step=False, on_epoch=True, prog_bar=False)
+        self.log('val_loss_binary', binary_loss, on_step=False, on_epoch=True, prog_bar=False)
+        self.log('val_loss_amt', amount_loss, on_step=False, on_epoch=True, prog_bar=False)
+
+        self.val_mcc_f1.append(f1_mcc)
+        self.val_binary_f1.append(f1_binary)
+        self.val_binary_rocauc.append(rocauc_binary)
+        self.val_amt_r2.append(r2_amount)
+
+    def on_validation_epoch_end(self) -> None:
+        self.log('val_mcc_f1', np.mean(self.val_mcc_f1))
+        self.log('val_binary_f1', np.mean(self.val_binary_f1))
+        self.log('val_binary_ROCAUC', np.mean(self.val_binary_rocauc))
+        self.log('val_amt_r2', np.mean(self.val_amt_r2))
+
+        self.val_mcc_f1.clear()
+        self.val_binary_f1.clear()
+        self.val_binary_rocauc.clear()
+        self.val_amt_r2.clear()
 
     def test_step(
         self,
@@ -337,9 +363,30 @@ class LSTMAE(LightningModule):
         batch_idx: int
     ) -> None:
         loss, \
-            (mcc_loss, binary_loss, amount_loss), \
-            (mcc_rec, is_income_rec, amount_rec) = self._calculate_losses(batch)
-        self.log('test_loss', loss, on_epoch=True, on_step=False)
+        (mcc_loss, binary_loss, amount_loss), \
+        (f1_mcc, f1_binary, rocauc_binary, r2_amount) = self._all_forward_step(
+            batch
+        )
+        self.log('test_loss', loss, prog_bar=True, on_step=False, on_epoch=True)
+        self.log('test_loss_mcc', mcc_loss, on_step=False, on_epoch=True, prog_bar=False)
+        self.log('test_loss_binary', binary_loss, on_step=False, on_epoch=True, prog_bar=False)
+        self.log('test_loss_amt', amount_loss, on_step=False, on_epoch=True, prog_bar=False)
+
+        self.test_mcc_f1.append(f1_mcc)
+        self.test_binary_f1.append(f1_binary)
+        self.test_binary_rocauc.append(rocauc_binary)
+        self.test_amt_r2.append(r2_amount)
+
+    def on_test_epoch_end(self) -> None:
+        self.log('test_mcc_f1', np.mean(self.test_mcc_f1))
+        self.log('test_binary_f1', np.mean(self.test_binary_f1))
+        self.log('test_binary_ROCAUC', np.mean(self.test_binary_rocauc))
+        self.log('test_amt_r2', np.mean(self.test_amt_r2))
+
+        self.test_mcc_f1.clear()
+        self.test_binary_f1.clear()
+        self.test_binary_rocauc.clear()
+        self.test_amt_r2.clear()
 
     def configure_optimizers(self) -> typing.Mapping[str, typing.Any]:
         opt = torch.optim.AdamW(
