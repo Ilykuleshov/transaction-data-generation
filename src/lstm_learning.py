@@ -77,7 +77,7 @@ def train_lstm(
         checkpoint = ModelCheckpoint(
             os.path.join('logs', 'lstm', 'checkpoints'),
             (
-                f"lstm__embed_dim{cfg_model['embed_dim']}_",
+                f"lstm__embed_dim{cfg_model['embed_dim']}_"
                 f"num_layers_{cfg_model['num_layers']}"
             ),
             'val_loss',
@@ -97,7 +97,6 @@ def train_lstm(
             devices=1,
             log_every_n_steps=20,
             logger=comet_logger,
-            deterministic=True,
             callbacks=callbacks,
             max_epochs=cfg_model['learning_params']['max_epochs']
         )

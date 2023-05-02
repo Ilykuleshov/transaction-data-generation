@@ -4,8 +4,8 @@ mcc_vocab_size: 377
 embed_dim: 32
 num_layers: 1
 loss_weights:
-  - .1
   - 1
+  - 100
   - 1
 freeze_embed: True
 unfreeze_after: 5
@@ -18,7 +18,7 @@ tr2vec:
   mcc_embed_size: 32
 learning_params:
   num_workers: 4
-  lr: .001
+  lr: .003
   weight_decay: .00001
   lr_schedule_params:
     factor: .5

@@ -66,8 +66,8 @@ class AEDataModule(LightningDataModule):
             self.train, self.val = random_split(
                 train_val,
                 (
-                    int(length * self.train_val_ratio),
-                    length - int(length * self.train_val_ratio)
+                    length - int(length * self.train_val_ratio),
+                    int(length * self.train_val_ratio)
                 )
             )
         elif stage == 'test':
@@ -117,9 +117,9 @@ class AEDataModule(LightningDataModule):
     ]]):
         user_id, mcc_codes, is_income, transaction_amt, lengths, targets = zip(*batch)
         user_id = torch.LongTensor(user_id)
-        mcc_codes = pad_sequence(mcc_codes, batch_first=True, padding_value=0)
-        is_income = pad_sequence(is_income, batch_first=True, padding_value=0)
-        transaction_amt = pad_sequence(transaction_amt, batch_first=True, padding_value=0)
+        mcc_codes = pad_sequence(mcc_codes, batch_first=True, padding_value=0).long()
+        is_income = pad_sequence(is_income, batch_first=True, padding_value=0).float()
+        transaction_amt = pad_sequence(transaction_amt, batch_first=True, padding_value=0).float()
         lengths = torch.LongTensor(lengths)
         targets = torch.LongTensor(targets)
         return user_id, mcc_codes, is_income, transaction_amt, lengths, targets
