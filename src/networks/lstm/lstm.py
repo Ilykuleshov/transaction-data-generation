@@ -188,8 +188,38 @@ class LSTMAE(LightningModule):
         return list(map(lambda seq: seq.masked_fill(~mask, 0), seqs_to_trim))
     
     def _calculate_metrics(
-        
-    ): ...
+        self,
+        mcc_probs: torch.Tensor,
+        is_income_probs: torch.Tensor,
+        amt_value: torch.Tensor,
+        mcc_orig: torch.Tensor,
+        is_income_orig: torch.Tensor,
+        amt_orig: torch.Tensor,
+        mask: torch.Tensor
+    ) -> None:
+        with torch.no_grad():
+            mcc_probs = torch.argmax(mcc_probs, 1)
+            mcc_probs = mcc_probs.masked_select(mask)
+            
+            is_income_probs = is_income_probs.masked_select(mask)
+            is_income_labels = is_income_probs >= .5
+
+            amt_value = amt_value.masked_select(mask)
+            
+            mcc_orig = mcc_orig.masked_select(mask)
+            is_income_orig = is_income_orig.masked_select(mask)
+            amt_orig = amt_orig.masked_select(mask)
+
+            self.training_mcc_f1.append(f1(mcc_probs, mcc_orig, 'macro'))
+            self.training_binary_f1.append(
+                f1(is_income_labels, is_income_orig)
+            )
+            self.training_binary_rocauc.append(
+                roc_auc(is_income_probs, is_income_orig)
+            )
+            self.training_amt_r2.append(r2(amt_value, amt_orig))
+
+
     
     def _calculate_losses(self, batch: tuple[
         torch.LongTensor,
@@ -325,4 +355,3 @@ class LSTMAE(LightningModule):
             verbose=True
         )
         return [opt], [{'scheduler': scheduler, 'monitor': 'val_loss'}]
-
