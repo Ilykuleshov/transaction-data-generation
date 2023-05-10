@@ -98,17 +98,14 @@ class LSTMAE(LightningModule):
 
         self.training_mcc_f1        = list()
         self.training_binary_f1     = list()
-        self.training_binary_rocauc = list()
         self.training_amt_r2        = list()
         
         self.val_mcc_f1        = list()
         self.val_binary_f1     = list()
-        self.val_binary_rocauc = list()
         self.val_amt_r2        = list()
 
         self.test_mcc_f1        = list()
         self.test_binary_f1     = list()
-        self.test_binary_rocauc = list()
         self.test_amt_r2        = list()
 
     # Set pretrained tr2vec weights
@@ -217,7 +214,6 @@ class LSTMAE(LightningModule):
             return (
                 f1(mcc_probs, mcc_orig, 'macro').item(),
                 f1(is_income_labels, is_income_orig).item(),
-                roc_auc(is_income_probs, is_income_orig).item(),
                 r2(amt_value, amt_orig).item()
             )
 
@@ -261,14 +257,14 @@ class LSTMAE(LightningModule):
             mcc_rec, is_income_rec, amount_rec, *batch[1:4]
         )
 
-        f1_mcc, f1_binary, rocauc_binary, r2_amount = self._calculate_metrics(
+        f1_mcc, f1_binary, r2_amount = self._calculate_metrics(
             mcc_rec, is_income_rec, amount_rec, *batch[1:4], mask
         )
 
         return(
             total_loss,
             (mcc_loss, binary_loss, amount_loss),
-            (f1_mcc, f1_binary, rocauc_binary, r2_amount)
+            (f1_mcc, f1_binary, r2_amount)
         )
         
     
@@ -286,7 +282,7 @@ class LSTMAE(LightningModule):
     ) -> float:
         loss, \
         (mcc_loss, binary_loss, amount_loss), \
-        (f1_mcc, f1_binary, rocauc_binary, r2_amount) = self._all_forward_step(
+        (f1_mcc, f1_binary, r2_amount) = self._all_forward_step(
             batch
         )
         self.log('train_loss', loss, prog_bar=True, on_step=True)
@@ -296,7 +292,6 @@ class LSTMAE(LightningModule):
 
         self.training_mcc_f1.append(f1_mcc)
         self.training_binary_f1.append(f1_binary)
-        self.training_binary_rocauc.append(rocauc_binary)
         self.training_amt_r2.append(r2_amount)
 
         return loss
@@ -304,12 +299,10 @@ class LSTMAE(LightningModule):
     def on_train_epoch_end(self) -> None:
         self.log('train_mcc_f1', np.mean(self.training_mcc_f1))
         self.log('train_binary_f1', np.mean(self.training_binary_f1))
-        self.log('train_binary_ROCAUC', np.mean(self.training_binary_rocauc))
         self.log('train_amt_r2', np.mean(self.training_amt_r2))
 
         self.training_mcc_f1.clear()
         self.training_binary_f1.clear()
-        self.training_binary_rocauc.clear()
         self.training_amt_r2.clear()
     
     def validation_step(
@@ -326,7 +319,7 @@ class LSTMAE(LightningModule):
     ) -> None:
         loss, \
         (mcc_loss, binary_loss, amount_loss), \
-        (f1_mcc, f1_binary, rocauc_binary, r2_amount) = self._all_forward_step(
+        (f1_mcc, f1_binary, r2_amount) = self._all_forward_step(
             batch
         )
         self.log('val_loss', loss, prog_bar=True, on_step=False, on_epoch=True)
@@ -336,18 +329,15 @@ class LSTMAE(LightningModule):
 
         self.val_mcc_f1.append(f1_mcc)
         self.val_binary_f1.append(f1_binary)
-        self.val_binary_rocauc.append(rocauc_binary)
         self.val_amt_r2.append(r2_amount)
 
     def on_validation_epoch_end(self) -> None:
         self.log('val_mcc_f1', np.mean(self.val_mcc_f1))
         self.log('val_binary_f1', np.mean(self.val_binary_f1))
-        self.log('val_binary_ROCAUC', np.mean(self.val_binary_rocauc))
         self.log('val_amt_r2', np.mean(self.val_amt_r2))
 
         self.val_mcc_f1.clear()
         self.val_binary_f1.clear()
-        self.val_binary_rocauc.clear()
         self.val_amt_r2.clear()
 
     def test_step(
@@ -364,7 +354,7 @@ class LSTMAE(LightningModule):
     ) -> None:
         loss, \
         (mcc_loss, binary_loss, amount_loss), \
-        (f1_mcc, f1_binary, rocauc_binary, r2_amount) = self._all_forward_step(
+        (f1_mcc, f1_binary, r2_amount) = self._all_forward_step(
             batch
         )
         self.log('test_loss', loss, prog_bar=True, on_step=False, on_epoch=True)
@@ -374,18 +364,15 @@ class LSTMAE(LightningModule):
 
         self.test_mcc_f1.append(f1_mcc)
         self.test_binary_f1.append(f1_binary)
-        self.test_binary_rocauc.append(rocauc_binary)
         self.test_amt_r2.append(r2_amount)
 
     def on_test_epoch_end(self) -> None:
         self.log('test_mcc_f1', np.mean(self.test_mcc_f1))
         self.log('test_binary_f1', np.mean(self.test_binary_f1))
-        self.log('test_binary_ROCAUC', np.mean(self.test_binary_rocauc))
         self.log('test_amt_r2', np.mean(self.test_amt_r2))
 
         self.test_mcc_f1.clear()
         self.test_binary_f1.clear()
-        self.test_binary_rocauc.clear()
         self.test_amt_r2.clear()
 
     def configure_optimizers(self) -> typing.Mapping[str, typing.Any]:

@@ -5,7 +5,7 @@ docker run \
  -d \
  -p ${CONTAINER_PORT}:8890 \
  --shm-size=8g \
- --memory=64g \
+ --memory=24g \
  --cpus=8 \
  --user ${DOCKER_USER_ID}:${DOCKER_GROUP_ID} \
  --name belousov-od-detection \

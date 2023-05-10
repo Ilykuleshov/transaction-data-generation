@@ -91,7 +91,7 @@ def train_lstm(
             project_name='lstm_ae_diploma',
             experiment_name=(
                 f"lstm__embed_dim{cfg_model['embed_dim']}_"
-                f"num_layers_{cfg_model['num_layers']}"
+                f"num_layers_{cfg_model['num_layers']}_"
                 f"{i}"
             )
         )

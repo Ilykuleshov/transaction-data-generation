@@ -1,8 +1,8 @@
 name: lstm
 num_iters: 5
 mcc_vocab_size: 377
-embed_dim: 32
-num_layers: 2
+embed_dim: 128
+num_layers: 1
 loss_weights:
   - 1
   - 100
