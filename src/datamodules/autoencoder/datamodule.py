@@ -121,5 +121,5 @@ class AEDataModule(LightningDataModule):
         is_income = pad_sequence(is_income, batch_first=True, padding_value=0).float()
         transaction_amt = pad_sequence(transaction_amt, batch_first=True, padding_value=0).float()
         lengths = torch.LongTensor(lengths)
-        targets = torch.LongTensor(targets)
+        targets = torch.Tensor(targets)
         return user_id, mcc_codes, is_income, transaction_amt, lengths, targets

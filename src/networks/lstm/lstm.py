@@ -1,4 +1,5 @@
 import typing
+from typing import Any
 
 from pytorch_lightning import LightningModule
 
@@ -167,7 +168,7 @@ class LSTMAE(LightningModule):
         )
 
         # squeeze for income and amount is required to reduce last dimension
-        return mcc_rec.permute((0, 2, 1)), is_income_rec.squeeze(), amount_rec.squeeze()
+        return mcc_rec.permute((0, 2, 1)), is_income_rec.squeeze(dim=-1), amount_rec.squeeze(dim=-1)
 
     def _compute_mask(self, lengths: torch.Tensor) -> torch.Tensor:
         max_length = lengths.max().detach().cpu().item()
@@ -267,6 +268,17 @@ class LSTMAE(LightningModule):
             (f1_mcc, f1_binary, r2_amount)
         )
         
+    def predict_step(self, batch: Any, batch_idx: int, dataloader_idx: int = 0) -> Any:
+        mask = self._compute_mask(batch[-2])
+        mcc_rec, is_income_rec, amount_rec = self(*batch[:-1], mask)
+        total_loss, (mcc_loss, binary_loss, amount_loss) = self._calculate_losses(
+            mcc_rec, is_income_rec, amount_rec, *batch[1:4]
+        )
+
+        return(
+            total_loss,
+            (mcc_loss, binary_loss, amount_loss)
+        )
     
     def training_step(
         self,
