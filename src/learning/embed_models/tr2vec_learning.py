@@ -35,7 +35,7 @@ def train_tr2vec(
         checkpoint = ModelCheckpoint(
             monitor='val_loss',
             mode='max',
-            dirpath=os.path.join('logs', 'checkpoints', 'tr2vec.ckp')
+            dirpath=os.path.join('logs', 'checkpoints', 'tr2vec')
         )
 
         callbacks = [checkpoint, early_stopping_callback]

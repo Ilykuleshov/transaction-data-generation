@@ -1,5 +1,6 @@
 import os
 import pickle
+import typing
 
 import numpy as np
 import pandas as pd
@@ -13,7 +14,9 @@ from src.anomaly_scheme import by_mcc_percentiles
 
 logger = get_logger(name=__name__)
 
-def preprocessing(cfg: DictConfig) -> pd.DataFrame:
+def preprocessing(
+    cfg: DictConfig, return_preproc: bool = False
+) -> typing.Union[pd.DataFrame, tuple[pd.DataFrame, pd.DataFrame]]:
     
     dir_path: str                   = cfg['dir_path']
     ignore_existing_preproc: bool   = cfg['ignore_existing_preproc']
@@ -131,4 +134,7 @@ def preprocessing(cfg: DictConfig) -> pd.DataFrame:
         })
         data_agg.to_parquet(os.path.join(preproc_dir_path, 'agg_dataset.parquet'))
 
-    return data_agg
+    if return_preproc:
+        return data_agg, data_srt
+    else:
+        return data_agg

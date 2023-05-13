@@ -190,3 +190,4 @@ logs/
 outputs/
 multirun/
 api_token.txt
+lightning_logs/

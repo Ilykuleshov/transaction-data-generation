@@ -2,7 +2,7 @@ import hydra
 from omegaconf import DictConfig
 
 from src.utils.logging_utils import get_logger
-from src import train_tr2vec, train_lstm
+from src.learning import train_embed_model, train_autoencoder
 
 logger = get_logger(name=__name__)
 
@@ -15,10 +15,14 @@ def main(cfg: DictConfig) -> None:
 
     mode: str = cfg['task'].lower()
     logger.info(f'Working mode - {mode}')
-    if mode == 'tr2vec':
-        train_tr2vec(cfg['dataset'], cfg['embed_model'], api_token)
-    elif mode == 'lstm':
-        train_lstm(cfg['dataset'], cfg['autoencoder'], api_token)
+    if mode == 'embed_model':
+        train_embed_model(cfg['embed_model']['name'])(
+            cfg['dataset'], cfg['embed_model'], api_token
+        )
+    elif mode == 'autoencoder':
+        train_autoencoder(cfg['autoencoder']['name'])(
+            cfg['dataset'], cfg['autoencoder'], api_token
+        )
 
 
 if __name__ == '__main__':

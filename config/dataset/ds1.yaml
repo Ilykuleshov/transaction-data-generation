@@ -4,6 +4,7 @@ ignore_existing_preproc: False
 user_column: user_id
 mcc_column: mcc_code
 transaction_amt_column: transaction_amt
+transaction_dttm_column: transaction_dttm
 preproc:
   drop_currency: True
   time_delta: 7

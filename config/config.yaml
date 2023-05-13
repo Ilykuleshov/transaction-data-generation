@@ -1,7 +1,7 @@
 defaults:
   - dataset: ds1
-  - embed_model: tr2vec
+  - embed_model: coles
   - autoencoder: lstm
   - _self_
-task: lstm
+task: embed_model
 api_token: 
