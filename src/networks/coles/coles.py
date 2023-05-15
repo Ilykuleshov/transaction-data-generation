@@ -6,6 +6,7 @@ import torch
 
 from ptls.nn import TrxEncoder, RnnSeqEncoder
 from ptls.frames.coles import CoLESModule
+from ptls.data_load.datasets import inference_data_loader
 
 
 class MyCoLES(CoLESModule):

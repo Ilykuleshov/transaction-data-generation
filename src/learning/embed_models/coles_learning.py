@@ -54,7 +54,7 @@ def train_coles(
             pickle.dump(preprocessor, f)
     else:
         with open(os.path.join(dir_coles, 'preprocessor.p'), 'rb') as f:
-            dataset = pickle.load(f).transform()
+            dataset = pickle.load(f).transform(preproc_df)
 
     for i in range(cfg_model['num_iters']):
 

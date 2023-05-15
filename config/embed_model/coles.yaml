@@ -1,7 +1,7 @@
 name: coles
 num_iters: 5
 mcc_vocab_size: 377
-mcc_embed_size: 16
+mcc_embed_size: 32
 embed_noise: .005
 hidden_size: 64
 # 'gru' or 'lstm'

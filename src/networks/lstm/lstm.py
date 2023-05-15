@@ -12,7 +12,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 from src.networks.common_layers import PositionalEncoding
 from src.utils.logging_utils import get_logger
-from src.utils.metrtics import f1, r2, roc_auc
+from src.utils.metrtics import f1, r2
 
 logger = get_logger(name=__name__)
 
