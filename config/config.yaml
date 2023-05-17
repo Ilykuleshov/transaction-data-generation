@@ -3,5 +3,5 @@ defaults:
   - embed_model: coles
   - autoencoder: lstm
   - _self_
-task: embed_model
+task: autoencoder
 api_token: 

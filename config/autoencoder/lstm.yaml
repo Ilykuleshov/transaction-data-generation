@@ -1,5 +1,5 @@
 name: lstm
-num_iters: 5
+num_iters: 1
 mcc_vocab_size: 377
 embed_dim: 128
 num_layers: 1

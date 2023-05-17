@@ -98,7 +98,7 @@ def train_lstm(
 
         trainer = Trainer(
             accelerator='gpu',
-            devices=1,
+            devices=[1],
             log_every_n_steps=20,
             logger=comet_logger,
             callbacks=callbacks,
