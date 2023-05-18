@@ -45,7 +45,11 @@ def train_lstm(
             cfg_model['freeze_embed'],
             cfg_model['unfreeze_after'],
             cfg_model['learning_params']['lr'],
-            cfg_model['learning_params']['weight_decay']
+            cfg_model['learning_params']['weight_decay'],
+            cfg_model['use_user_embedding'],
+            cfg_model['user_embedding_size'],
+            cfg_model['use_masked_prediction'],
+            cfg_model['rand_rate']
         )
 
         datamodule = AEDataModule(
@@ -78,7 +82,9 @@ def train_lstm(
             os.path.join('logs', 'lstm', 'checkpoints'),
             (
                 f"lstm__embed_dim{cfg_model['embed_dim']}_"
-                f"num_layers_{cfg_model['num_layers']}"
+                f"num_layers_{cfg_model['num_layers']}_"
+                f"user_embed_{cfg_model['user_embedding_size'] if cfg_model['use_user_embedding'] else None}_"
+                f"masked_pred_{cfg_model['rand_rate'] if cfg_model['use_masked_prediction'] else None}"
             ),
             'val_loss',
             mode='min'
@@ -92,6 +98,8 @@ def train_lstm(
             experiment_name=(
                 f"lstm__embed_dim{cfg_model['embed_dim']}_"
                 f"num_layers_{cfg_model['num_layers']}_"
+                f"user_embed_{cfg_model['user_embedding_size'] if cfg_model['use_user_embedding'] else None}_"
+                f"masked_pred_{cfg_model['rand_rate'] if cfg_model['use_masked_prediction'] else None}_"
                 f"{i}"
             )
         )

@@ -4,6 +4,7 @@ from typing import Any
 from pytorch_lightning import LightningModule
 
 import numpy as np
+import pandas as pd
 
 import torch
 from torch import nn
@@ -30,23 +31,36 @@ class LSTMAE(LightningModule):
         unfreeze_after: int,
         lr: float,
         weight_decay: float,
+        use_user_embedding: bool,
+        user_embedding_size: int,
+        use_masked_prediction: bool,
+        rand_rate: float,
         *args: typing.Any, **kwargs: typing.Any
     ) -> None:
         super().__init__(*args, **kwargs)
 
         self.save_hyperparameters({
-            'embed_dim'     : embed_dim,
-            'num_layers'    : num_layers,
-            'mcc_embed_dim' : mcc_embed_dim,
-            'n_vocab_size'  : n_vocab_size,
-            'loss_weights'  : loss_weights,
-            'freeze_embed'  : freeze_embed,
-            'unfreeze_after': unfreeze_after,
-            'lr'            : lr,
-            'weight_decay'  : weight_decay
+            'embed_dim'             : embed_dim,
+            'num_layers'            : num_layers,
+            'mcc_embed_dim'         : mcc_embed_dim,
+            'n_vocab_size'          : n_vocab_size,
+            'loss_weights'          : loss_weights,
+            'freeze_embed'          : freeze_embed,
+            'unfreeze_after'        : unfreeze_after,
+            'lr'                    : lr,
+            'weight_decay'          : weight_decay,
+            'use_user_embedding'    : use_user_embedding,
+            'user_embedding_size'   : user_embedding_size,
+            'use_masked_prediction' : use_masked_prediction,
+            'rand_rate'             : rand_rate
         })
 
         n_features = mcc_embed_dim + 2
+        if use_user_embedding:
+            n_features += user_embedding_size
+            self.user_embeds = pd.read_parquet(
+                'data/new_data/preprocessed/user_embeddings.parquet'
+            )
 
         self.mcc_embed = nn.Embedding(
             n_vocab_size + 1,
@@ -137,7 +151,23 @@ class LSTMAE(LightningModule):
         is_income = torch.unsqueeze(is_income, -1)
         transaction_amt = torch.unsqueeze(transaction_amt, -1)
 
-        mat_orig = torch.cat((mcc_embed, transaction_amt, is_income), -1).float()
+        mat_orig = torch.cat(
+            (mcc_embed, transaction_amt, is_income),
+            -1
+        ).float()
+
+        if self.hparams['use_user_embedding']:
+            user_embeds = self._compare_user2embed(user_id)
+
+            user_embeds = user_embeds.repeat([mcc_embed.shape[1], 1, 1]).permute((
+                1, 0, 2
+            )).float()
+            mat_orig = torch.cat((user_embeds, mat_orig), -1)
+
+        if self.hparams['use_masked_prediction']:
+            mat_orig = mat_orig.masked_fill(self._compute_rand_mask(
+                *mat_orig.shape
+            ), 0)
         # Pack sequnces to get a real hidden state
         # no matter of difference in lengths
         packed_mat = pack_padded_sequence(
@@ -170,12 +200,23 @@ class LSTMAE(LightningModule):
         # squeeze for income and amount is required to reduce last dimension
         return mcc_rec.permute((0, 2, 1)), is_income_rec.squeeze(dim=-1), amount_rec.squeeze(dim=-1)
 
+    def _compare_user2embed(self, user_ids: torch.Tensor) -> torch.Tensor:
+        return torch.tensor(
+            self.user_embeds.loc[user_ids.detach().cpu()].values,
+        ).to(self.device)
+
     def _compute_mask(self, lengths: torch.Tensor) -> torch.Tensor:
         max_length = lengths.max().detach().cpu().item()
         mask = torch.arange(max_length) \
                 .expand(len(lengths), max_length) \
                 .to(self.device) < lengths.unsqueeze(1)
         mask.requires_grad_(False).unsqueeze_(-1)
+        return mask
+
+    def _compute_rand_mask(self, B: int, L: int, H: int) -> torch.Tensor:
+        mask = (torch.rand((B, L)) < self.hparams['rand_rate'])
+        mask = mask.unsqueeze(-1).repeat(1, 1, H).to(self.device)
+        mask.requires_grad_(False)
         return mask
 
     # Method for returning original padding
