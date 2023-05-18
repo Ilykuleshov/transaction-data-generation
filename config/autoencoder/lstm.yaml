@@ -1,5 +1,5 @@
 name: lstm
-num_iters: 1
+num_iters: 3
 mcc_vocab_size: 377
 embed_dim: 128
 num_layers: 1
@@ -11,7 +11,7 @@ freeze_embed: True
 unfreeze_after: 5
 use_user_embedding: True
 user_embedding_size: 32
-use_masked_prediction: True
+use_masked_prediction: False
 rand_rate: .2
 
 data_split:

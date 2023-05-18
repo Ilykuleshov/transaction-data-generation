@@ -146,7 +146,7 @@ class LSTMAE(LightningModule):
         mask: torch.Tensor 
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         mcc_embed = self.mcc_embed(mcc_codes)
-        mcc_embed = self.pe(mcc_embed)
+        mcc_embed = self.pe(mcc_embed, mask)
 
         is_income = torch.unsqueeze(is_income, -1)
         transaction_amt = torch.unsqueeze(transaction_amt, -1)
@@ -162,7 +162,9 @@ class LSTMAE(LightningModule):
             user_embeds = user_embeds.repeat([mcc_embed.shape[1], 1, 1]).permute((
                 1, 0, 2
             )).float()
+            user_embeds = user_embeds.masked_fill(~mask, 0)
             mat_orig = torch.cat((user_embeds, mat_orig), -1)
+        # print(mat_orig)
 
         if self.hparams['use_masked_prediction']:
             mat_orig = mat_orig.masked_fill(self._compute_rand_mask(

@@ -17,6 +17,7 @@ class PositionalEncoding(nn.Module):
         pe[0, :, 1::2] = torch.cos(position * div_term)
         self.register_buffer('pe', pe)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         x = x + self.pe[:, :x.size(1), :]
+        x = x.masked_fill(~mask, 0)
         return self.dropout(x)
