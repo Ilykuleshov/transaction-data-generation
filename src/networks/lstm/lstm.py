@@ -35,6 +35,7 @@ class LSTMAE(LightningModule):
         user_embedding_size: int,
         use_masked_prediction: bool,
         rand_rate: float,
+        mask_token: int,
         *args: typing.Any, **kwargs: typing.Any
     ) -> None:
         super().__init__(*args, **kwargs)
@@ -52,7 +53,8 @@ class LSTMAE(LightningModule):
             'use_user_embedding'    : use_user_embedding,
             'user_embedding_size'   : user_embedding_size,
             'use_masked_prediction' : use_masked_prediction,
-            'rand_rate'             : rand_rate
+            'rand_rate'             : rand_rate,
+            'mask_token'            : mask_token
         })
 
         n_features = mcc_embed_dim + 2
@@ -169,7 +171,7 @@ class LSTMAE(LightningModule):
         if self.hparams['use_masked_prediction']:
             mat_orig = mat_orig.masked_fill(self._compute_rand_mask(
                 *mat_orig.shape
-            ), 0)
+            ), self.hparams['mask_token'])
         # Pack sequnces to get a real hidden state
         # no matter of difference in lengths
         packed_mat = pack_padded_sequence(
@@ -320,7 +322,8 @@ class LSTMAE(LightningModule):
 
         return(
             total_loss,
-            (mcc_loss, binary_loss, amount_loss)
+            (mcc_loss, binary_loss, amount_loss),
+            (mcc_rec, is_income_rec, amount_rec)
         )
     
     def training_step(

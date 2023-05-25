@@ -7,8 +7,8 @@ transaction_amt_column: transaction_amt
 transaction_dttm_column: transaction_dttm
 preproc:
   drop_currency: True
-  time_delta: 7
-  len_min: 40
-  len_max: 120
+  time_delta: 3
+  len_min: 20
+  len_max: 90
 anomaly_strategy: quantile
-percentile: .99
+percentile: .95

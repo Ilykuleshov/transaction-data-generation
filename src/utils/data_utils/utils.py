@@ -22,27 +22,32 @@ def split_into_samples(
     index = 0
     start_time = data.iloc[0]['transaction_dttm']
     count = 0
+    index_to_drop = []
+    increment = 0
 
-    for i in tqdm(range(len(data))):
+    for i in tqdm(range(len(data)), leave=True):
         curr_time = data.iloc[i][data_column_name]
         curr_user = data.iloc[i][user_column_name]
         count += 1
-        if (
-            (curr_time > start_time + timedelta(days=time_delta) and count > 40) or \
-            curr_user != start_user
-        ):
+        if curr_user != start_user:
+            if len_min > count < len_max:
+                index_to_drop.append(index)
             count = 1
             index += 1
-            start_time = curr_time
             start_user = curr_user
+            start_time = curr_time
+        elif curr_time > start_time + timedelta(days=time_delta):
+            start_time = curr_time
+            if count >= len_min:
+                if len_min > count < len_max:
+                    index_to_drop.append(index)
+                count = 1
+                index += 1
         label_column[i] = index
+    if len_min > count < len_max:
+        index_to_drop.append(index)
     
-    data['sample_label'] = label_column
-    data['count_temp'] = data.groupby('sample_label')['sample_label'].count()
-    data.drop(
-        index=data[(data['count_temp'] < len_min) | (data['count_temp'] > len_max)].index,
-        axis=0,
-        inplace=True
-    )
-    data.drop(columns='count_temp', axis=1, inplace=True)
+    data['sample_label'] = np.array(label_column)
+    data.drop(index=data[data['sample_label'].isin(index_to_drop)].index, axis=0, inplace=True)
     data['sample_label'] = data['sample_label'].astype(np.int32)
+    

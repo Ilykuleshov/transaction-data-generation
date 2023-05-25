@@ -49,7 +49,8 @@ def train_lstm(
             cfg_model['use_user_embedding'],
             cfg_model['user_embedding_size'],
             cfg_model['use_masked_prediction'],
-            cfg_model['rand_rate']
+            cfg_model['rand_rate'],
+            cfg_model['mask_token']
         )
 
         datamodule = AEDataModule(
@@ -94,7 +95,7 @@ def train_lstm(
 
         comet_logger = CometLogger(
             api_token,
-            project_name='lstm_ae_diploma',
+            project_name='lstm_ae_new_diploma',
             experiment_name=(
                 f"lstm__embed_dim{cfg_model['embed_dim']}_"
                 f"num_layers_{cfg_model['num_layers']}_"

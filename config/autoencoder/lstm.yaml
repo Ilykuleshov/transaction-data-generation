@@ -11,8 +11,9 @@ freeze_embed: True
 unfreeze_after: 5
 use_user_embedding: True
 user_embedding_size: 32
-use_masked_prediction: False
+use_masked_prediction: True
 rand_rate: .2
+mask_token: -1
 
 data_split:
   test_size: .2
@@ -27,7 +28,7 @@ learning_params:
   lr_schedule_params:
     factor: .5
     patience: 2
-  batch_size: 128
+  batch_size: 256
   max_epochs: 50
   early_stopping_params:
     min_delta: .001
