@@ -1,6 +1,9 @@
 import typing
 from typing import Any
 
+from omegaconf import DictConfig
+from hydra.utils import instantiate
+
 from pytorch_lightning import LightningModule
 
 import numpy as np
@@ -8,9 +11,8 @@ import pandas as pd
 
 import torch
 from torch import nn
-import torch.nn.functional as F
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
+from src.networks.autoencoder_core import CoreBase
 from src.networks.common_layers import PositionalEncoding
 from src.utils.logging_utils import get_logger
 from src.utils.metrtics import f1, r2
@@ -22,8 +24,6 @@ class LSTMAE(LightningModule):
 
     def __init__(
         self,
-        embed_dim: int,
-        num_layers: int,
         mcc_embed_dim: int,
         n_vocab_size: int,
         loss_weights: tuple[float, float, float],
@@ -36,13 +36,12 @@ class LSTMAE(LightningModule):
         use_masked_prediction: bool,
         rand_rate: float,
         mask_token: int,
+        core_ae: DictConfig,
         *args: typing.Any, **kwargs: typing.Any
     ) -> None:
         super().__init__(*args, **kwargs)
 
         self.save_hyperparameters({
-            'embed_dim'             : embed_dim,
-            'num_layers'            : num_layers,
             'mcc_embed_dim'         : mcc_embed_dim,
             'n_vocab_size'          : n_vocab_size,
             'loss_weights'          : loss_weights,
@@ -54,7 +53,8 @@ class LSTMAE(LightningModule):
             'user_embedding_size'   : user_embedding_size,
             'use_masked_prediction' : use_masked_prediction,
             'rand_rate'             : rand_rate,
-            'mask_token'            : mask_token
+            'mask_token'            : mask_token,
+            'core_ae'               : core_ae
         })
 
         n_features = mcc_embed_dim + 2
@@ -75,35 +75,11 @@ class LSTMAE(LightningModule):
 
         self.pe = PositionalEncoding(mcc_embed_dim)
 
-        self.encoder1 = nn.LSTM(
-            input_size=n_features,
-            hidden_size=embed_dim * 2,
-            num_layers=num_layers,
-            batch_first=True
-        )
-        self.encoder2 = nn.LSTM(
-            input_size=embed_dim * 2,
-            hidden_size=embed_dim,
-            num_layers=num_layers,
-            batch_first=True
-        )
+        self.ae_core: CoreBase = instantiate(core_ae, input_size=n_features)
 
-        self.decoder1 = nn.LSTM(
-            input_size=embed_dim,
-            hidden_size=embed_dim * 2,
-            num_layers=1,
-            batch_first=True
-        )
-        self.decoder2 = nn.LSTM(
-            input_size=embed_dim * 2,
-            hidden_size=embed_dim * 2,
-            num_layers=1,
-            batch_first=True
-        )
-
-        self.out_amount = nn.Linear(2 * embed_dim, 1)
-        self.out_binary = nn.Linear(2 * embed_dim, 1)
-        self.out_mcc    = nn.Linear(2 * embed_dim, n_vocab_size + 1)
+        self.out_amount = nn.Linear(core_ae['output_size'], 1)
+        self.out_binary = nn.Linear(core_ae['output_size'], 1)
+        self.out_mcc    = nn.Linear(core_ae['output_size'], n_vocab_size + 1)
 
         self.amount_loss_weights    = loss_weights[0]
         self.binary_loss_weights    = loss_weights[1]
@@ -158,6 +134,11 @@ class LSTMAE(LightningModule):
             -1
         ).float()
 
+        if self.hparams['use_masked_prediction']:
+            mat_orig = mat_orig.masked_fill(self._compute_rand_mask(
+                *mat_orig.shape
+            ), self.hparams['mask_token'])
+
         if self.hparams['use_user_embedding']:
             user_embeds = self._compare_user2embed(user_id)
 
@@ -166,29 +147,8 @@ class LSTMAE(LightningModule):
             )).float()
             user_embeds = user_embeds.masked_fill(~mask, 0)
             mat_orig = torch.cat((user_embeds, mat_orig), -1)
-        # print(mat_orig)
 
-        if self.hparams['use_masked_prediction']:
-            mat_orig = mat_orig.masked_fill(self._compute_rand_mask(
-                *mat_orig.shape
-            ), self.hparams['mask_token'])
-        # Pack sequnces to get a real hidden state
-        # no matter of difference in lengths
-        packed_mat = pack_padded_sequence(
-            mat_orig,
-            lengths.cpu(),
-            batch_first=True,
-            enforce_sorted=False
-        )
-
-        packed_mat, _ = self.encoder1(packed_mat)
-        packed_mat, _ = self.encoder2(packed_mat)
-
-        packed_mat, _ = self.decoder1(packed_mat)
-        packed_mat, _ = self.decoder2(packed_mat)
-
-        # Get original format (batch_size X 2 * embed_dim X max_length)
-        seqs_after_lstm = pad_packed_sequence(packed_mat, True)[0]
+        seqs_after_lstm = self.ae_core(mat_orig, lengths)
 
         mcc_rec = self.out_mcc(seqs_after_lstm)
         is_income_rec = self.out_binary(seqs_after_lstm)

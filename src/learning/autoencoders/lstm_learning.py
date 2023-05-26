@@ -37,8 +37,6 @@ def train_lstm(
             shuffle=True
         )
         model = LSTMAE(
-            cfg_model['embed_dim'],
-            cfg_model['num_layers'],
             tr2vec_mcc_embed_size,
             cfg_model['mcc_vocab_size'],
             cfg_model['loss_weights'],
@@ -50,7 +48,8 @@ def train_lstm(
             cfg_model['user_embedding_size'],
             cfg_model['use_masked_prediction'],
             cfg_model['rand_rate'],
-            cfg_model['mask_token']
+            cfg_model['mask_token'],
+            cfg_model['core']
         )
 
         datamodule = AEDataModule(
@@ -80,10 +79,10 @@ def train_lstm(
         )
 
         checkpoint = ModelCheckpoint(
-            os.path.join('logs', 'lstm', 'checkpoints'),
+            os.path.join('logs', 'lstm_new', 'checkpoints'),
             (
-                f"lstm__embed_dim{cfg_model['embed_dim']}_"
-                f"num_layers_{cfg_model['num_layers']}_"
+                f"lstm__embed_dim{cfg_model['core']['hidden_size']}_"
+                f"num_layers_{cfg_model['core']['num_layers']}_"
                 f"user_embed_{cfg_model['user_embedding_size'] if cfg_model['use_user_embedding'] else None}_"
                 f"masked_pred_{cfg_model['rand_rate'] if cfg_model['use_masked_prediction'] else None}"
             ),
@@ -97,8 +96,8 @@ def train_lstm(
             api_token,
             project_name='lstm_ae_new_diploma',
             experiment_name=(
-                f"lstm__embed_dim{cfg_model['embed_dim']}_"
-                f"num_layers_{cfg_model['num_layers']}_"
+                f"lstm__embed_dim{cfg_model['core']['hidden_size']}_"
+                f"num_layers_{cfg_model['core']['num_layers']}_"
                 f"user_embed_{cfg_model['user_embedding_size'] if cfg_model['use_user_embedding'] else None}_"
                 f"masked_pred_{cfg_model['rand_rate'] if cfg_model['use_masked_prediction'] else None}_"
                 f"{i}"

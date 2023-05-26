@@ -1,8 +1,11 @@
 name: lstm
-num_iters: 3
+core:
+  _target_: src.networks.autoencoder_core.SimpleLSTM
+  hidden_size: 128
+  output_size: 256
+  num_layers: 1
+num_iters: 1
 mcc_vocab_size: 377
-embed_dim: 128
-num_layers: 1
 loss_weights:
   - 1
   - 100
