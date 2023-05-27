@@ -16,6 +16,7 @@ from src.networks.autoencoder_core import CoreBase
 from src.networks.common_layers import PositionalEncoding
 from src.utils.logging_utils import get_logger
 from src.utils.metrtics import f1, r2
+from src.utils.data_utils import trim_out_seq, compute_mask, compute_rand_mask
 
 logger = get_logger(name=__name__)
 
@@ -135,8 +136,10 @@ class LSTMAE(LightningModule):
         ).float()
 
         if self.hparams['use_masked_prediction']:
-            mat_orig = mat_orig.masked_fill(self._compute_rand_mask(
-                *mat_orig.shape
+            mat_orig = mat_orig.masked_fill(compute_rand_mask(
+                *mat_orig.shape,
+                self.hparams['rand_rate'],
+                self.device
             ), self.hparams['mask_token'])
 
         if self.hparams['use_user_embedding']:
@@ -157,39 +160,21 @@ class LSTMAE(LightningModule):
         # as BCEWithLogits will provide for all paddings .5 probability
         is_income_rec = torch.sigmoid(is_income_rec)
 
-        mcc_rec, is_income_rec, amount_rec = self._trim_out_seq(
+        mcc_rec, is_income_rec, amount_rec = trim_out_seq(
             [mcc_rec, is_income_rec, amount_rec], mask
         )
 
         # squeeze for income and amount is required to reduce last dimension
-        return mcc_rec.permute((0, 2, 1)), is_income_rec.squeeze(dim=-1), amount_rec.squeeze(dim=-1)
+        return (
+            mcc_rec.permute((0, 2, 1)),
+            is_income_rec.squeeze(dim=-1),
+            amount_rec.squeeze(dim=-1)
+        )
 
     def _compare_user2embed(self, user_ids: torch.Tensor) -> torch.Tensor:
         return torch.tensor(
             self.user_embeds.loc[user_ids.detach().cpu()].values,
         ).to(self.device)
-
-    def _compute_mask(self, lengths: torch.Tensor) -> torch.Tensor:
-        max_length = lengths.max().detach().cpu().item()
-        mask = torch.arange(max_length) \
-                .expand(len(lengths), max_length) \
-                .to(self.device) < lengths.unsqueeze(1)
-        mask.requires_grad_(False).unsqueeze_(-1)
-        return mask
-
-    def _compute_rand_mask(self, B: int, L: int, H: int) -> torch.Tensor:
-        mask = (torch.rand((B, L)) < self.hparams['rand_rate'])
-        mask = mask.unsqueeze(-1).repeat(1, 1, H).to(self.device)
-        mask.requires_grad_(False)
-        return mask
-
-    # Method for returning original padding
-    def _trim_out_seq(
-        self,
-        seqs_to_trim: tuple[torch.Tensor, ...],
-        mask: torch.Tensor
-    ) -> list[torch.Tensor]:
-        return list(map(lambda seq: seq.masked_fill(~mask, 0), seqs_to_trim))
     
     def _calculate_metrics(
         self,
@@ -256,7 +241,7 @@ class LSTMAE(LightningModule):
             torch.Tensor
         ]
     ):
-        mask = self._compute_mask(batch[-2])
+        mask = compute_mask(batch[-2], self.device)
         mcc_rec, is_income_rec, amount_rec = self(*batch[:-1], mask)
 
         total_loss, (mcc_loss, binary_loss, amount_loss) = self._calculate_losses(
@@ -274,7 +259,7 @@ class LSTMAE(LightningModule):
         )
         
     def predict_step(self, batch: Any, batch_idx: int, dataloader_idx: int = 0) -> Any:
-        mask = self._compute_mask(batch[-2])
+        mask = compute_mask(batch[-2], self.device)
         mcc_rec, is_income_rec, amount_rec = self(*batch[:-1], mask)
         total_loss, (mcc_loss, binary_loss, amount_loss) = self._calculate_losses(
             mcc_rec, is_income_rec, amount_rec, *batch[1:4]

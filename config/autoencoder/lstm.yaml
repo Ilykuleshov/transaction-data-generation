@@ -1,7 +1,7 @@
 name: lstm
 core:
-  _target_: src.networks.autoencoder_core.SimpleLSTM
-  hidden_size: 128
+  _target_: src.networks.autoencoder_core.NLPLSTM
+  hidden_size: 256
   output_size: 256
   num_layers: 1
 num_iters: 1

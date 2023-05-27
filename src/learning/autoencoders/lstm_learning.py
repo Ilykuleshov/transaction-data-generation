@@ -94,7 +94,7 @@ def train_lstm(
 
         comet_logger = CometLogger(
             api_token,
-            project_name='lstm_ae_new_diploma',
+            project_name='lstm_ae_nlp_diploma',
             experiment_name=(
                 f"lstm__embed_dim{cfg_model['core']['hidden_size']}_"
                 f"num_layers_{cfg_model['core']['num_layers']}_"
