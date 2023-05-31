@@ -8,7 +8,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
 import torch
 
-from src.preprocessing.new_data_preprop import preprocessing
+from src.preprocessing import preprocessing
 from src.networks.tr2vec import Transaction2VecJoint
 from src.datamodules.tr2vec import T2VDatamodule
 
@@ -16,7 +16,7 @@ from src.datamodules.tr2vec import T2VDatamodule
 def train_tr2vec(
     cfg_preprop: DictConfig, cfg_model: DictConfig, api_token: str
 )-> None:
-    seq_data = preprocessing(cfg_preprop)
+    seq_data = preprocessing(cfg_preprop['name'])(cfg_preprop)
     for i in range(cfg_model['num_iters']):
         model = Transaction2VecJoint(cfg_model)
 
@@ -35,14 +35,14 @@ def train_tr2vec(
         checkpoint = ModelCheckpoint(
             monitor='val_loss',
             mode='max',
-            dirpath=os.path.join('logs', 'checkpoints', 'tr2vec')
+            dirpath=os.path.join('logs', 'gender', 'checkpoints', 'tr2vec')
         )
 
         callbacks = [checkpoint, early_stopping_callback]
 
         comet_logger = CometLogger(
             api_key=api_token,
-            project_name='tr2vec_diploma',
+            project_name='tr2vec_gender_diploma',
             experiment_name=f'tr2vec_{i}'
         )
 
@@ -69,6 +69,7 @@ def train_tr2vec(
             {'mccs': model_best.mcc_embedding_layer.weight.data},
             os.path.join(
                 'logs',
+                'gender',
                 'data_weight',
                 f'tr2vec_mcc={mcc_emb_size}_window={window_size}.pth',
             )

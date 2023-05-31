@@ -192,3 +192,4 @@ multirun/
 api_token.txt
 lightning_logs/
 .hydra/
+.cometml-runs

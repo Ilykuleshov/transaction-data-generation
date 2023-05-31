@@ -1,21 +1,21 @@
 name: lstm
 core:
-  _target_: src.networks.autoencoder_core.NLPLSTM
+  _target_: src.networks.autoencoder_core.SimpleLSTM
   hidden_size: 256
   output_size: 256
   num_layers: 1
-num_iters: 1
-mcc_vocab_size: 377
+num_iters: 3
+mcc_vocab_size: 184
 loss_weights:
   - 1
   - 100
   - 1
 freeze_embed: True
 unfreeze_after: 5
-use_user_embedding: True
+use_user_embedding: False
 user_embedding_size: 32
-use_masked_prediction: True
-rand_rate: .2
+use_masked_prediction: False
+rand_rate: .15
 mask_token: -1
 
 data_split:

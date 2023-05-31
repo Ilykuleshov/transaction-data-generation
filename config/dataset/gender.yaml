@@ -1,0 +1,12 @@
+name: gender
+dir_path: data/gender_data
+ignore_existing_preproc: False
+user_column: customer_id
+mcc_column: mcc_code
+transaction_amt_column: amount
+transaction_dttm_column: tr_datetime
+preproc:
+  drop_tr_type: True
+  time_delta: 3
+  len_min: 20
+  len_max: 90

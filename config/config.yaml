@@ -1,7 +1,8 @@
 defaults:
   - dataset: ds1
-  - embed_model: coles
+  - embed_model: tr2vec
   - autoencoder: lstm
   - _self_
 task: autoencoder
 api_token: 
+main_model_folder: gender

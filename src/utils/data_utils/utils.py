@@ -21,9 +21,9 @@ def split_into_samples(
     label_column = np.zeros(data.shape[0])
     start_user = data.iloc[0][user_column_name]
 
-    start_user = data.iloc[0]['user_id']
+    start_user = data.iloc[0][user_column_name]
     index = 0
-    start_time = data.iloc[0]['transaction_dttm']
+    start_time = data.iloc[0][data_column_name]
     count = 0
     index_to_drop = []
     increment = 0

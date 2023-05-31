@@ -1,8 +1,8 @@
 name: tr2vec
 window_size: 10
-num_iters: 1
-mcc_vocab_size: 377
-mcc_embed_size: 16
+num_iters: 3
+mcc_vocab_size: 184
+mcc_embed_size: 32
 data_split:
   test_fraq: .2
   val_fraq: .2

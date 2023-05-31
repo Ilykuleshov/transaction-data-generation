@@ -11,7 +11,7 @@ from pytorch_lightning import Trainer
 
 from sklearn.model_selection import train_test_split
 
-from src.preprocessing.new_data_preprop import preprocessing
+from src.preprocessing import preprocessing
 from src.datamodules.autoencoder import AEDataModule
 from src.networks.lstm import LSTMAE
 
@@ -20,13 +20,13 @@ def train_lstm(
     cfg_preprop: DictConfig, cfg_model: DictConfig, api_token: str
 ) -> None:
     
-    seq_data = preprocessing(cfg_preprop)
+    seq_data = preprocessing(cfg_preprop['name'])(cfg_preprop)
 
     tr2vec_window_size: int = cfg_model['tr2vec']['window_size']
     tr2vec_mcc_embed_size: int = cfg_model['tr2vec']['mcc_embed_size'] 
 
     weights = torch.load(os.path.join(
-        'logs/data_weight',
+        'logs/gender/data_weight',
         f'tr2vec_mcc={tr2vec_mcc_embed_size}_window={tr2vec_window_size}.pth'
     ))
 
@@ -79,7 +79,7 @@ def train_lstm(
         )
 
         checkpoint = ModelCheckpoint(
-            os.path.join('logs', 'lstm_new', 'checkpoints'),
+            os.path.join('logs', 'gender', 'lstm', 'checkpoints'),
             (
                 f"lstm__embed_dim{cfg_model['core']['hidden_size']}_"
                 f"num_layers_{cfg_model['core']['num_layers']}_"
@@ -94,7 +94,7 @@ def train_lstm(
 
         comet_logger = CometLogger(
             api_token,
-            project_name='lstm_ae_nlp_diploma',
+            project_name='lstm_ae_gender_diploma',
             experiment_name=(
                 f"lstm__embed_dim{cfg_model['core']['hidden_size']}_"
                 f"num_layers_{cfg_model['core']['num_layers']}_"
