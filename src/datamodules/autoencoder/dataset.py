@@ -1,68 +1,28 @@
-import typing
+from omegaconf import DictConfig
 
-import numpy as np
-import pandas as pd
-
-import torch
-from torch.utils.data import Dataset
-
-from src.utils.logging_utils import get_logger
-
-logger = get_logger(name=__name__)
+from ptls.data_load.datasets import MemoryMapDataset
+from ptls.data_load.iterable_processing import SeqLenFilter
+from ptls.frames.coles import ColesDataset
+from ptls.frames.coles.split_strategy import SampleUniform
 
 
-class AEDataset(Dataset):
+class MyColesDataset(ColesDataset):
 
     def __init__(
         self,
-        data: pd.DataFrame,
-        user_column: str = 'user_id',
-        mcc_code_column: str = 'mcc_code',
-        transaction_amt_column: str = 'transaction_amt',
-        anomaly_fraq: float = .2,
-        only_normal: bool = True,
-        binarize: bool = False
-    ) -> None:
-        super().__init__()
-        # Drop anomaly if required
-        if only_normal:
-            shape_before = data.shape[0]
-            data.drop(index=data[data['target'] > anomaly_fraq].index, inplace=True)
-            logger.info(f'Samples droped - {shape_before - data.shape[0]}')
+        data: list[dict],
+        coles_conf: DictConfig,
+        col_time: str = 'event_time',
+        *args, **kwargs
+    ):
+        
+        min_len: int = coles_conf['data']['min_len']
+        split_count: int = coles_conf['data']['split_count']
+        seq_len: int = coles_conf['data']['seq_len']
 
-        self.user_ids = [
-            torch.tensor(user_id, dtype=torch.int32) for user_id in data[user_column]
-        ] 
-        self.mcc_codes = [
-            torch.tensor(mcc_code, dtype=torch.int32) for mcc_code in data[mcc_code_column]
-        ]
-        self.is_income = [
-            torch.tensor(income, dtype=torch.int32) for income in data['is_income']
-        ]
-        self.transaction_amt = [
-            torch.tensor(amt) for amt in data[transaction_amt_column]
-        ]
-        self.targets = data['target'].values
-        if binarize:
-            self.targets = (self.targets > anomaly_fraq).astype(np.int32)
-
-    def __getitem__(self, index) -> typing.Tuple[
-        torch.LongTensor,
-        torch.LongTensor,
-        torch.LongTensor,
-        torch.DoubleTensor,
-        float,
-        int
-    ]:
-        user_id = self.user_ids[index]
-        mcc_codes = self.mcc_codes[index]
-        is_income = self.is_income[index]
-        transaction_amt = self.transaction_amt[index]
-        target = self.targets[index]
-        length = len(mcc_codes)
-
-        return user_id, mcc_codes, is_income, transaction_amt, length, target
-    
-
-    def __len__(self) -> int:
-        return self.targets.shape[0]
+        super().__init__(
+            MemoryMapDataset(data, [SeqLenFilter(min_len)]),
+            SampleUniform(split_count, seq_len),
+            col_time,
+            *args, **kwargs
+        )

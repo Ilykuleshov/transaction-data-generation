@@ -1,8 +1,5 @@
 defaults:
-  - dataset: ds1
-  - embed_model: tr2vec
+  - dataset: churn
   - autoencoder: lstm
   - _self_
-task: autoencoder
-api_token: 
-main_model_folder: gender
+main_model_folder: churn

@@ -193,3 +193,5 @@ api_token.txt
 lightning_logs/
 .hydra/
 .cometml-runs
+wandb/
+transaction_data_generation/

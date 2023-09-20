@@ -1,1 +1,1 @@
-from .train import train_autoencoder, train_embed_model
+from .ae_learning import train_autoencoder

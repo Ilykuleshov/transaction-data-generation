@@ -1,0 +1,13 @@
+name: churn
+dir_path: data/churn
+ignore_existing_preproc: False
+user_column: user_id
+mcc_column: mcc_code
+transaction_amt_column: amount
+transaction_dttm_column: timestamp
+# anomaly_strategy: quantile
+# percentile: .95
+data:
+  min_len: 20
+  split_count: 5
+  seq_len: 40

@@ -1,0 +1,1 @@
+PROJECT_NAME = "transaction_data_generation"

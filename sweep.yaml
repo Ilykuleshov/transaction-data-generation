@@ -1,0 +1,15 @@
+program: main.py
+method: grid
+metric:
+  name: val_mcc_f1
+  goal: maximize
+parameters:
+  autoencoder.loss_weights.mcc: 
+    values: [1, 10, 100]
+  autoencoder.learning_params.lr: 
+    values: [0.001, 0.0001]
+command:
+  - ${env}
+  - ${interpreter}
+  - ${program}
+  - ${args_no_hyphens}
