@@ -1,16 +1,14 @@
 import os
 import pickle
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
 from omegaconf import DictConfig, OmegaConf
 import pandas as pd
 
-from ptls.preprocessing import PandasDataPreprocessor
 from ptls.frames import PtlsDataModule
 
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
-from pytorch_lightning.loggers import CometLogger
 
 from sklearn.model_selection import train_test_split
 from pytorch_lightning.loggers import WandbLogger
@@ -31,18 +29,17 @@ logger = get_logger(name=__name__)
 def train_autoencoder(cfg_preprop: DictConfig, cfg_model: DictConfig) -> None:
     cfg = OmegaConf.merge({"dataset": cfg_preprop, "model": cfg_model})
     dir_path: str = cfg_preprop["dir_path"]
-    user_column: str = cfg_preprop["user_column"]
-    dttm_column: str = cfg_preprop["transaction_dttm_column"]
     mcc_column: str = cfg_preprop["mcc_column"]
-    amt_column: str = cfg_preprop["transaction_amt_column"]
+    amt_column: str = cfg_preprop["amt_column"]
 
-    preproc_df = pd.read_parquet(os.path.join(dir_path, "preprocessed", "preproc_dataset.parquet"))
+    dataset: List[Dict] = preprocessing(cfg_preprop)
 
     n_mccs: int = cfg_model["n_mccs"]
     freeze_embed: bool = cfg_model["freeze_embed"]
     unfreeze_after: int = cfg_model["unfreeze_after"]
     core_ae: DictConfig = cfg_model["autoencoder_core"]
     loss_weights: Dict = cfg_model["loss_weights"]
+    weights_path: str = cfg_model["weights_path"]
 
     lr = cfg_model["learning_params"]["lr"]
     weight_decay = cfg_model["learning_params"]["weight_decay"]
@@ -51,27 +48,6 @@ def train_autoencoder(cfg_preprop: DictConfig, cfg_model: DictConfig) -> None:
     # early_stopping_params = cfg_model["learning_params"]["early_stopping_params"]
 
     dir_coles = os.path.join(dir_path, "coles")
-
-    if not os.path.exists(dir_coles):
-        logger.warning("Coles folder does not exist. Creating...")
-        os.mkdir(dir_coles)
-
-    if not os.path.exists(os.path.join(dir_coles, "preprocessor.p")):
-        preprocessor = PandasDataPreprocessor(
-            user_column,
-            dttm_column,
-            cols_category=[mcc_column],
-            cols_numerical=[amt_column],
-            return_records=True,
-        )
-
-        logger.info("Fitting CoLES preprocessor")
-        dataset = preprocessor.fit_transform(preproc_df)
-        with open(os.path.join(dir_coles, "preprocessor.p"), "wb") as f:
-            pickle.dump(preprocessor, f)
-    else:
-        with open(os.path.join(dir_coles, "preprocessor.p"), "rb") as f:
-            dataset = pickle.load(f).transform(preproc_df)
 
     with wandb.init(project=PROJECT_NAME, config=OmegaConf.to_container(cfg)): # type: ignore
         train, val = train_test_split(dataset, test_size=0.2)
@@ -96,7 +72,8 @@ def train_autoencoder(cfg_preprop: DictConfig, cfg_model: DictConfig) -> None:
             lr=lr,
             weight_decay=weight_decay,
             amnt_col=amt_column,
-            mcc_col=mcc_column
+            mcc_col=mcc_column,
+            weights_path=weights_path
         )
 
         wandb_logger = WandbLogger(

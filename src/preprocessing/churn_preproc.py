@@ -1,6 +1,7 @@
 import os
+from pathlib import Path
 import pickle
-import typing
+import typing as tp
 
 import numpy as np
 import pandas as pd
@@ -10,128 +11,69 @@ from omegaconf import DictConfig
 from src.utils.logging_utils import get_logger
 from src.utils.data_utils import split_into_samples
 from src.anomaly_scheme import by_mcc_percentiles
+from ptls.preprocessing import PandasDataPreprocessor
 
 
 logger = get_logger(name=__name__)
 
-def preprocessing(
-    cfg: DictConfig
-) -> tuple[pd.DataFrame, pd.DataFrame]: 
-    
-    dir_path: str                   = cfg['dir_path']
-    ignore_existing_preproc: bool   = cfg['ignore_existing_preproc']
-    # drop_currency: bool             = cfg['preproc']['drop_currency']
-    time_delta: int                 = cfg['preproc']['time_delta']
-    len_min: int                    = cfg['preproc']['len_min']
-    len_max: int                    = cfg['preproc']['len_max']
-    anomaly_strategy: str           = cfg['anomaly_strategy']
-    percentile: float               = cfg['percentile']
 
-    user_column: str = cfg["user_column"]
+def preprocessing(cfg: DictConfig) -> tp.List[tp.Dict]:
+    dir_path: Path = Path(cfg["dir_path"])
+    ignore_existing_preproc: bool = cfg["ignore_existing_preproc"]
+    amount_quantile: float = cfg["amount_quantile"]
+
     mcc_column: str = cfg["mcc_column"]
-    transaction_amt_column: str = cfg["transaction_amt_column"]
-    transaction_dttm_column: str = cfg["transaction_dttm_column"]
+    amt_column: str = cfg["amt_column"]
 
-    preproc_dir_path = os.path.join(dir_path, 'preprocessed')
-    if not os.path.exists(preproc_dir_path):
-        logger.warning('Preprocessing folder does not exist. Creating...')
-        os.mkdir(preproc_dir_path)
     if ignore_existing_preproc:
-        logger.info('Preprocessing will ignore all previously saved files')
+        logger.info("Preprocessing will ignore all previously saved files")
 
-    if not ignore_existing_preproc and os.path.exists(os.path.join(preproc_dir_path, "preproc_dataset.parquet")):
-        data_srt = pd.read_parquet(os.path.join(preproc_dir_path, 'preproc_dataset.parquet'))
-    # TODO: mebe fix preprocessing
+    preproc_df_path = dir_path / "preproc_df.parquet"
+    if not ignore_existing_preproc and preproc_df_path.exists():
+        df = pd.read_parquet(preproc_df_path)
     else:
-        df_orig = pd.read_parquet(os.path.join(dir_path, 'data.parquet'))
+        df = pd.read_csv(dir_path / "raw_data.csv")
+        logger.info("Transfering timestamp to the datetime format")
+        df["TRDATETIME"] = pd.to_datetime(
+            df["TRDATETIME"], format=r"%y%b%d:%H:%M:%S"
+        )
+        logger.info("Done!")
 
-        # logger.info('Transfering timestamp to the datetime format')
-        # df_orig['transaction_dttm'] = pd.to_datetime(
-        #     df_orig['transaction_dttm'],
-        #     format='%Y-%m-%d %H:%M:%S'
-        # )
-        # logger.info('Done!')
+        currency_mode = df["currency"].mode().item()
+        logger.info(f"Dropping transactions with currency != {currency_mode=}")
+        df = df[df["currency"] == currency_mode]
+        logger.info("Done!")
 
-        # df_orig.drop(
-        #     index=df_orig[df_orig['mcc_code'] == -1].index,
-        #     axis=0,
-        #     inplace=True
-        # )
+        amount_quantile_val = df["amount"].quantile(amount_quantile)
+        logger.info(f"Dropping transactions larger than {amount_quantile_val=}...")
+        df = df[df["amount"] < amount_quantile_val]
+        logger.info("Done!")
 
-        # if drop_currency:
-        #     logger.info('Dropping currency_rk')
-        #     df_orig.drop(
-        #         index=df_orig[df_orig['currency_rk'] != 48].index,
-        #         axis=0,
-        #         inplace=True
-        #     )
-        #     df_orig.drop(columns=['currency_rk'], axis=1, inplace=True)
-        #     logger.info('Done!')
+        df.drop(
+            columns=["channel_type", "PERIOD", "currency", "trx_category", "target_flag", "target_sum"],
+            inplace=True
+        )
 
-        # if (
-        #     os.path.exists(os.path.join(preproc_dir_path, 'mcc2id.dict')) and \
-        #     not ignore_existing_preproc
-        # ):
-        #     with open(os.path.join(preproc_dir_path, 'mcc2id.dict'), 'rb') as f:
-        #         mcc2id = dict(pickle.load(f))
-        # else:
-        #     mcc2id = dict(zip(
-        #         df_orig['mcc_code'].unique(), 
-        #         np.arange(df_orig['mcc_code'].nunique()) + 1
-        #     ))
-        #     with open(os.path.join(preproc_dir_path, 'mcc2id.dict'), 'wb') as f:
-        #         pickle.dump(mcc2id, f)
-        
-        # df_orig['mcc_code'] = df_orig['mcc_code'].map(mcc2id)
+        df.rename(columns={"amount": amt_column, "MCC": mcc_column}, inplace=True)
+        df["amount"] = df["amount"].astype("float32")
+        df.to_parquet(preproc_df_path)
 
-        # df_orig['is_income'] = (df_orig['transaction_amt'] > 0).astype(np.int32)
-        # df_orig['transaction_amt'] = df_orig[['transaction_amt', 'is_income']].apply(
-        #     lambda t: np.log(t[0]) if t[1] else np.log(-t[0]),
-        #     axis=1
-        # )
+    preprocessor_path = dir_path / "preprocessor.p"
+    if not preprocessor_path.exists() or ignore_existing_preproc:
+        preprocessor = PandasDataPreprocessor(
+            "cl_id",
+            "TRDATETIME",
+            cols_category=[mcc_column],
+            cols_numerical=[amt_column],
+            return_records=True,
+        )  # type: ignore
 
-        # if (
-        #     os.path.exists(os.path.join(preproc_dir_path, 'user2id.dict')) and \
-        #     not ignore_existing_preproc
-        # ):
-        #     with open(os.path.join(preproc_dir_path, 'user2id.dict'), 'rb') as f:
-        #         user2id = dict(pickle.load(f))
-        # else:
-        #     user2id = dict(zip(
-        #         df_orig['user_id'].unique(), 
-        #         np.arange(df_orig['user_id'].nunique()) + 1
-        #     ))
-        #     with open(os.path.join(preproc_dir_path, 'user2id.dict'), 'wb') as f:
-        #         pickle.dump(user2id, f)
-        # df_orig['user_id'] = df_orig['user_id'].map(user2id)
-        
-        data_srt = df_orig.sort_values(['user_id','timestamp']).reset_index(drop=True)
-
-        logger.info('Start splitting into samples')
-        split_into_samples(data_srt, time_delta, len_min, len_max, user_column_name=user_column, data_column_name=transaction_dttm_column)
-        logger.info('Done!')
-        # logger.info('Anomaly splitting')
-        # if anomaly_strategy == 'quantile':
-        #     by_mcc_percentiles(data_srt, percentile=percentile, mcc_column=mcc_column, transaction_amt_column=transaction_amt_column, binary_income_column=None)
-        # logger.info('Done!')
-        # anomaly_samples = data_srt['target'].sum()
-        # normal_samples = data_srt.shape[0] - anomaly_samples
-        # logger.info(f'Normal samples count - {int(normal_samples)}. Anomaly Samples - {int(anomaly_samples)}')
-
-        data_srt.to_parquet(os.path.join(preproc_dir_path, 'preproc_dataset.parquet'))
-
-    if (
-        os.path.exists(os.path.join(preproc_dir_path, 'agg_dataset.parquet')) and \
-        not ignore_existing_preproc
-    ):
-        data_agg = pd.read_parquet(os.path.join(preproc_dir_path, 'agg_dataset.parquet'))
-    
+        logger.info("Fitting Pandas preprocessor")
+        dataset: tp.List[tp.Dict] = preprocessor.fit_transform(df)  # type: ignore
+        with open(preprocessor_path, "wb") as f:
+            pickle.dump(preprocessor, f)
     else:
-        data_agg = data_srt.groupby('sample_label').agg({
-            user_column: lambda x: x.iloc[0],
-            mcc_column: lambda x: x.tolist(),
-            transaction_amt_column: lambda x: x.tolist(),
-        })
-        data_agg.to_parquet(os.path.join(preproc_dir_path, 'agg_dataset.parquet'))
+        with open(preprocessor_path, "rb") as f:
+            dataset = pickle.load(f).transform(df)
 
-    return data_agg, data_srt
+    return dataset

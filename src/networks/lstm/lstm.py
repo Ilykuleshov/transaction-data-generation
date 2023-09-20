@@ -1,5 +1,5 @@
 import typing
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from omegaconf import DictConfig
 from hydra.utils import instantiate
@@ -11,7 +11,7 @@ import pandas as pd
 
 import torch
 from torch import nn
-from torcheval.metrics.functional import multiclass_f1_score, mean_squared_error
+from torcheval.metrics.functional import multiclass_f1_score, r2_score
 from ptls.data_load import PaddedBatch
 from ptls.frames.coles import ColesDataset
 from ptls.frames import PtlsDataModule
@@ -37,6 +37,7 @@ class LSTMAE(LightningModule):
         mcc_col: str,
         core_ae: DictConfig,
         *args: typing.Any,
+        weights_path: Optional[str] = "",
         **kwargs: typing.Any
     ) -> None:
         super().__init__(*args, **kwargs)
@@ -56,6 +57,10 @@ class LSTMAE(LightningModule):
         )
 
         self.ae_core: CoreBase = instantiate(core_ae)
+        if weights_path:
+            self.ae_core.encoder.load_state_dict(
+                torch.load(weights_path)
+            )
 
         self.out_amount = nn.Linear(self.ae_core.output_size, 1)
         self.out_mcc = nn.Linear(self.ae_core.output_size, n_mcc_codes + 1)
@@ -123,7 +128,7 @@ class LSTMAE(LightningModule):
                     average="macro",
                     num_classes=self.hparams["n_mcc_codes"] + 1,
                 ).item(),
-                mean_squared_error(amt_value[mask].flatten(), amt_orig[mask].flatten()).item(),
+                r2_score(amt_value[mask].flatten(), amt_orig[mask].flatten()).item(),
             )
 
     def _calculate_losses(
@@ -136,10 +141,7 @@ class LSTMAE(LightningModule):
         # Lengths tensor
 
         mcc_loss = self.mcc_criterion(mcc_rec.transpose(2, 1), mcc_orig)
-        amount_loss = self.amount_criterion(
-            torch.log(nn.functional.relu(amount_rec) + 1), 
-            torch.log(nn.functional.relu(amount_orig) + 1)
-        ) ** 0.5
+        amount_loss = torch.log(self.amount_criterion(amount_rec, amount_orig))
 
         total_loss = (
             self.mcc_loss_weights * mcc_loss + self.amount_loss_weights * amount_loss
