@@ -55,7 +55,6 @@ def train_autoencoder(
         trainer = Trainer(
             accelerator="gpu",
             devices=1,
-            log_every_n_steps=20,
             logger=wandb_logger,
             **cfg["trainer_args"],
         )
