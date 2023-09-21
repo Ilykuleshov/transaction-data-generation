@@ -118,7 +118,7 @@ class VanillaAE(AbsAE):
         if not self.trainer:
             raise ValueError("No trainer!")
 
-        stage = self.trainer.state.stage
+        stage = self.trainer.state.stage.value # type: ignore
 
         loss, (mcc_loss, amount_loss), (f1_mcc, r2_amount) = self._all_forward_step(
             batch
@@ -143,4 +143,4 @@ class VanillaAE(AbsAE):
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             opt, "min", 1e-1, 2, verbose=True
         )
-        return [opt], [{"scheduler": scheduler, "monitor": "val_loss"}]
+        return [opt], [{"scheduler": scheduler, "monitor": "validate_loss"}]
