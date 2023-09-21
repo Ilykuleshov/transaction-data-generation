@@ -35,8 +35,8 @@ ARG DOCKER_GROUP_ID
 USER root
 RUN groupadd -g $DOCKER_GROUP_ID $DOCKER_NAME
 
-RUN adduser --disabled-password --uid $DOCKER_USER_ID --gid $DOCKER_GROUP_ID --gecos '' --shell /bin/bash $DOCKER_NAME \
- && chown -R $DOCKER_NAME:$DOCKER_NAME /app
+RUN adduser --disabled-password --uid $DOCKER_USER_ID --gid $DOCKER_GROUP_ID --gecos '' --shell /bin/bash "$DOCKER_NAME" --force-badname \
+ && chown -R "$DOCKER_NAME":"$DOCKER_NAME" /app
 RUN echo "$DOCKER_NAME ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90-$DOCKER_NAME
 USER $DOCKER_NAME
 
@@ -57,5 +57,3 @@ RUN curl -sLo ~/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-py39
  && rm /app/environment.yml \
  && conda clean -ya
 
-# RUN git clone https://github.com/nokiroki/NLP-Transactions.git
-CMD jupyter notebook --allow-root --ip='0.0.0.0' --port=8890 --NotebookApp.token='' --NotebookApp.password=''

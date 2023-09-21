@@ -8,8 +8,8 @@ docker run \
  --memory=24g \
  --cpus=4 \
  --user ${DOCKER_USER_ID}:${DOCKER_GROUP_ID} \
- --name belousov-od-detection \
+ --name "${DOCKER_NAME}.${IMAGE_NAME}" \
  --rm -it --init \
- -v /home/n.belousov/out-of-distribution-ts-detection:/app \
- --gpus all \
- od-det bash
+ -v $(cd .. && pwd):/app \
+ --gpus 0 \
+ "${DOCKER_NAME}/${IMAGE_NAME}" bash
