@@ -2,7 +2,7 @@ from typing import Dict, Tuple
 
 import torch
 from torch import nn, Tensor
-from torcheval.metrics.functional import multiclass_f1_score, r2_score
+from torcheval.metrics.functional import multiclass_auroc, r2_score
 from ptls.data_load import PaddedBatch
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 
@@ -72,11 +72,10 @@ class VanillaAE(AbsAE):
 
             mask.squeeze_()
             return (
-                multiclass_f1_score(
+                multiclass_auroc(
                     mcc_preds,
                     mcc_orig,
-                    average="macro",
-                    num_classes=self.hparams["n_mcc_codes"] + 1,
+                    num_classes=self.mcc_vocab_size + 1,
                 ).item(),
                 r2_score(amt_value[mask].flatten(), amt_orig[mask].flatten()).item(),
             )
