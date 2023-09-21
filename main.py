@@ -9,7 +9,7 @@ logger = get_logger(name=__name__)
 
 @hydra.main(config_path="config", config_name="config", version_base=None)
 def main(cfg: DictConfig) -> None:
-    train_autoencoder(cfg["dataset"], cfg["autoencoder"])
+    train_autoencoder(cfg)
 
 
 if __name__ == "__main__":

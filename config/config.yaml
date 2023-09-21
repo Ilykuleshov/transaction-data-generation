@@ -1,5 +1,14 @@
 defaults:
   - dataset: churn
-  - autoencoder: lstm
-  - _self_
-main_model_folder: churn
+  - encoder: coles_pretrained
+  - decoder: lstm
+  - module: vanilla
+
+trainer_args:
+  max_epochs: 50
+
+datamodule_args:
+  train_batch_size: 32
+  val_batch_size: 8
+  train_num_workers: 4
+  val_num_workers: 4
