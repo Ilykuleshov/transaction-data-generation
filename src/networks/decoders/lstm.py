@@ -17,10 +17,11 @@ class LSTMDecoder(nn.LSTM, AbsDecoder):
             hidden_size=hidden_size,
             num_layers=num_layers,
             proj_size=proj_size,
+            bidir=bidir,
             batch_first=True,
         )
 
-        self.output_size = hidden_size * num_layers * (bidir + 1)
+        self.output_size = hidden_size
 
     def forward(self, x: Tensor, hx: tp.Optional[tp.Tuple[Tensor, Tensor]] = None):
         return super().forward(x, hx)[0]

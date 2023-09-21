@@ -46,7 +46,8 @@ class VanillaAE(AbsAE):
         self,
         batch: PaddedBatch,
     ) -> tuple[Tensor, Tensor]:
-        seqs_after_lstm = super().__call__(batch)  # supposedly (B * S, L, E)
+        seqs_after_lstm = super().forward(batch)  # supposedly (B * S, L, E)
+
         mcc_rec = self.out_mcc(seqs_after_lstm)
         amount_rec = self.out_amount(seqs_after_lstm)
 
