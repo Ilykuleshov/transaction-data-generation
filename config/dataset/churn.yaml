@@ -1,6 +1,6 @@
 name: churn
 dir_path: data/churn
-ignore_existing_preproc: True
+ignore_existing_preproc: False
 mcc_column: mcc_code
 amt_column: amount
 amount_quantile: .95

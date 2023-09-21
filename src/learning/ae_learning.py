@@ -27,7 +27,6 @@ logger = get_logger(name=__name__)
 def train_autoencoder(
     cfg: DictConfig,
 ) -> None:
-    
     mcc_column: str = cfg["dataset"]["mcc_column"]
     amt_column: str = cfg["dataset"]["amt_column"]
 
@@ -44,8 +43,7 @@ def train_autoencoder(
 
         encoder: SeqEncoderContainer = instantiate(cfg["encoder"])
         decoder: AbsDecoder = instantiate(cfg["decoder"])
-        module: AbsAE = instantiate(
-            cfg["module"],
+        module: AbsAE = instantiate(cfg["module"])(
             encoder=encoder,
             decoder=decoder,
             amnt_col=amt_column,
@@ -59,7 +57,7 @@ def train_autoencoder(
             devices=1,
             log_every_n_steps=20,
             logger=wandb_logger,
-            **cfg["trainer_args"]
+            **cfg["trainer_args"],
         )
 
         trainer.fit(module, datamodule)
