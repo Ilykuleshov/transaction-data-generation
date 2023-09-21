@@ -15,10 +15,10 @@ from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 
 from src.preprocessing.churn_preproc import preprocessing
 from src.datamodules.autoencoder.dataset import MyColesDataset
-from src.networks.decoders import AbsDecoder
+from src.networks.decoders.base import AbsDecoder
 from src.utils.logging_utils import get_logger
 from src.const import PROJECT_NAME
-from src.networks.modules import AbsAE
+from src.networks.modules.base import AbsAE
 
 
 logger = get_logger(name=__name__)
@@ -35,8 +35,6 @@ def train_autoencoder(
 
     with wandb.init(project=PROJECT_NAME, config=OmegaConf.to_container(cfg)):  # type: ignore
         train, val = train_test_split(dataset, test_size=0.2)
-
-        training_params: DictConfig = cfg["module"]["learning_params"]
 
         datamodule = PtlsDataModule(
             train_data=MyColesDataset(train, cfg["dataset"]),

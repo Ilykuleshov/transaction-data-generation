@@ -1,6 +1,6 @@
 from torch import nn, Tensor
 import typing as tp
-from src.networks.decoders import AbsDecoder
+from src.networks.decoders.base import AbsDecoder
 
 
 class LSTMDecoder(nn.LSTM, AbsDecoder):
@@ -8,6 +8,7 @@ class LSTMDecoder(nn.LSTM, AbsDecoder):
         self,
         input_size: int,
         hidden_size: int,
+        proj_size: int = 0,
         num_layers: int = 1,
         bidir: bool = False,
     ):
@@ -15,6 +16,7 @@ class LSTMDecoder(nn.LSTM, AbsDecoder):
             input_size=input_size,
             hidden_size=hidden_size,
             num_layers=num_layers,
+            proj_size=proj_size,
             batch_first=True,
         )
 

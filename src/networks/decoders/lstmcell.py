@@ -1,7 +1,7 @@
 from typing import Tuple, Optional
 import torch
 from torch import nn, Tensor
-from src.networks.decoders import AbsDecoder
+from src.networks.decoders.base import AbsDecoder
 
 class LSTMCellDecoder(AbsDecoder):
     def __init__(

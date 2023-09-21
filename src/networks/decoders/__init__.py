@@ -1,1 +1,2 @@
-from .base import AbsDecoder
+from .lstm import LSTMDecoder
+from .lstmcell import LSTMCellDecoder
