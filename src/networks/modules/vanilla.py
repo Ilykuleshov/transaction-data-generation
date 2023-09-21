@@ -1,4 +1,5 @@
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
+from pytorch_lightning.utilities.types import STEP_OUTPUT
 
 import torch
 from torch import nn, Tensor
@@ -114,15 +115,15 @@ class VanillaAE(AbsAE):
 
         return (total_loss, (mcc_loss, amount_loss), (f1_mcc, r2_amount))
 
-    def _step(self, batch: Tuple[PaddedBatch, Tensor], batch_idx: int, *args, **kwargs):
+    def _step(self, stage: str, batch: Tuple[PaddedBatch, Tensor], batch_idx: int, *args, **kwargs):
         if not self.trainer:
             raise ValueError("No trainer!")
 
-        stage = self.trainer.state.stage.value # type: ignore
 
         loss, (mcc_loss, amount_loss), (f1_mcc, r2_amount) = self._all_forward_step(
             batch
         )
+        
         self.log(f"{stage}_loss", loss, prog_bar=True, on_step=True)
         self.log(f"{stage}_loss_mcc", mcc_loss, on_step=True, prog_bar=False)
         self.log(f"{stage}_loss_amt", amount_loss, on_step=True, prog_bar=False)
@@ -132,7 +133,14 @@ class VanillaAE(AbsAE):
 
         return loss
 
-    training_step = validation_step = test_step = _step
+    def training_step(self, *args, **kwargs) -> STEP_OUTPUT:
+        return self._step("train", *args, **kwargs)
+    
+    def validation_step(self, *args, **kwargs) -> STEP_OUTPUT | None:
+        return self._step("val", *args, **kwargs)
+
+    def test_step(self, *args, **kwargs) -> STEP_OUTPUT | None:
+        return self._step("test", *args, **kwargs)
 
     def configure_optimizers(self):
         opt = torch.optim.AdamW(
@@ -143,4 +151,4 @@ class VanillaAE(AbsAE):
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             opt, "min", 1e-1, 2, verbose=True
         )
-        return [opt], [{"scheduler": scheduler, "monitor": "validate_loss"}]
+        return [opt], [{"scheduler": scheduler, "monitor": "val_loss"}]

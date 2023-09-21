@@ -6,6 +6,8 @@ defaults:
 
 trainer_args:
   max_epochs: 50
+  accumulate_grad_batches: 8
+  gradient_clip_val: 1.
 
 datamodule_args:
   train_batch_size: 16
