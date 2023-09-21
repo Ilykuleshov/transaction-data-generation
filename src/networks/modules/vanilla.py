@@ -5,7 +5,6 @@ from torch import nn, Tensor
 from torcheval.metrics.functional import multiclass_f1_score, r2_score
 from ptls.data_load import PaddedBatch
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
-from networks.decoders import AbsDecoder
 
 from src.networks.decoders import AbsDecoder
 from src.networks.modules import AbsAE
