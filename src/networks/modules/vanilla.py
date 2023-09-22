@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Union
 from pytorch_lightning.utilities.types import STEP_OUTPUT
 
 import torch
@@ -123,9 +123,14 @@ class VanillaAE(AbsAE):
             batch
         )
         
-        self.log(f"{stage}_loss", loss.detach().cpu(), on_step=True, prog_bar=True, on_epoch=False)
-        self.log(f"{stage}_loss_mcc", mcc_loss.detach().cpu(), on_step=True, prog_bar=False, on_epoch=False)
-        self.log(f"{stage}_loss_amt", amount_loss.detach().cpu(), on_step=True, prog_bar=False, on_epoch=False)
+        log_loss_params: Dict[str, Any] = dict(
+            on_step = (stage == "train"),
+            on_epoch = (stage != "train")
+        )
+        
+        self.log(f"{stage}_loss", loss.detach().cpu(), prog_bar=True, **log_loss_params)
+        self.log(f"{stage}_loss_mcc", mcc_loss.detach().cpu(), **log_loss_params)
+        self.log(f"{stage}_loss_amt", amount_loss.detach().cpu(), **log_loss_params)
 
         self.log(f"{stage}_mcc_auc", auc_mcc, on_step=False, on_epoch=True)
         self.log(f"{stage}_amt_r2", r2_amount, on_step=False, on_epoch=True)
