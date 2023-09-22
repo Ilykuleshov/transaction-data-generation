@@ -8,7 +8,6 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import WandbLogger
 from sklearn.model_selection import train_test_split
 
-import wandb
 from src.const import PROJECT_NAME
 from src.datamodules.autoencoder.dataset import MyColesDataset
 from src.networks.decoders.base import AbsDecoder
@@ -27,32 +26,32 @@ def train_autoencoder(
 
     dataset: List[Dict] = preprocessing(cfg["dataset"])
 
-    with wandb.init(project=PROJECT_NAME, config=OmegaConf.to_container(cfg)):  # type: ignore
-        train, val = train_test_split(dataset, test_size=0.2)
+    train, val = train_test_split(dataset, test_size=0.2)
 
-        datamodule = PtlsDataModule(
-            train_data=MyColesDataset(train, cfg["dataset"]),
-            valid_data=MyColesDataset(val, cfg["dataset"]),
-            **cfg["datamodule_args"],
-        )
+    datamodule = PtlsDataModule(
+        train_data=MyColesDataset(train, cfg["dataset"]),
+        valid_data=MyColesDataset(val, cfg["dataset"]),
+        **cfg["datamodule_args"],
+    )
 
-        encoder: SeqEncoderContainer = instantiate(cfg["encoder"])
-        decoder: AbsDecoder = instantiate(cfg["decoder"])
-        module: AbsAE = instantiate(cfg["module"])(
-            encoder=encoder,
-            decoder=decoder,
-            amnt_col=amt_column,
-            mcc_col=mcc_column,
-        )
+    encoder: SeqEncoderContainer = instantiate(cfg["encoder"])
+    decoder: AbsDecoder = instantiate(cfg["decoder"])
+    module: AbsAE = instantiate(cfg["module"])(
+        encoder=encoder,
+        decoder=decoder,
+        amnt_col=amt_column,
+        mcc_col=mcc_column,
+    )
 
-        wandb_logger = WandbLogger(project=PROJECT_NAME)
+    wandb_logger = WandbLogger(project=PROJECT_NAME, log_model="all")
+    wandb_logger.experiment.config.update(OmegaConf.to_container(cfg))
 
-        trainer = Trainer(
-            accelerator="gpu",
-            devices=1,
-            logger=wandb_logger,
-            log_every_n_steps=10,
-            **cfg["trainer_args"],
-        )
+    trainer = Trainer(
+        accelerator="gpu",
+        devices=1,
+        logger=wandb_logger,
+        log_every_n_steps=10,
+        **cfg["trainer_args"],
+    )
 
-        trainer.fit(module, datamodule)
+    trainer.fit(module, datamodule)
