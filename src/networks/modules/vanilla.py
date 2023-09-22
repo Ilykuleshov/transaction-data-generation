@@ -3,8 +3,9 @@ from pytorch_lightning.utilities.types import STEP_OUTPUT
 
 import torch
 from torch import nn, Tensor
+import numpy as np
 
-from sklearn.metrics import roc_auc_score, f1_score, r2_score
+from torcheval.metrics.functional import multiclass_auroc, multiclass_f1_score, r2_score
 
 from ptls.data_load import PaddedBatch
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
@@ -73,23 +74,27 @@ class VanillaAE(AbsAE):
             mcc_orig = mcc_orig[mask]
             mcc_preds = mcc_preds[mask].reshape((*mcc_orig.shape, -1))
 
-            mcc_orig_np = mcc_orig.detach().cpu().numpy()
-            mcc_preds_np = mcc_preds.detach().cpu().numpy()
-
+            labels = mcc_orig.unique()
+            num_classes = len(labels)
+            mcc_orig = torch.argwhere(mcc_orig[:, None] == labels[None, :])[:, 1]
+            mcc_preds = mcc_preds[:, labels]
+            
             return (
-                roc_auc_score(
-                    mcc_orig_np,
-                    mcc_preds_np,
+                multiclass_auroc(
+                    mcc_preds,
+                    mcc_orig,
                     average="macro",
+                    num_classes=num_classes
                 ).item(),
-                f1_score(
-                    mcc_preds_np,
-                    mcc_orig_np.argmax(1),
+                multiclass_f1_score(
+                    mcc_preds,
+                    mcc_orig,
                     average="macro",
+                    num_classes=num_classes
                 ).item(),
                 r2_score(
-                    amt_value[mask].detach().cpu().numpy(),
-                    amt_orig[mask].detach().cpu().numpy(),
+                    amt_value[mask],
+                    amt_orig[mask],
                 ).item(),
             )
 
