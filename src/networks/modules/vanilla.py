@@ -109,26 +109,25 @@ class VanillaAE(AbsAE):
             mcc_rec, amount_rec, mcc_orig, amount_orig
         )
 
-        f1_mcc, r2_amount = self._calculate_metrics(
+        auc_mcc, r2_amount = self._calculate_metrics(
             mcc_rec, amount_rec, mcc_orig, amount_orig, padded_batch.seq_len_mask
         )
 
-        return (total_loss, (mcc_loss, amount_loss), (f1_mcc, r2_amount))
+        return (total_loss, (mcc_loss, amount_loss), (auc_mcc, r2_amount))
 
     def _step(self, stage: str, batch: Tuple[PaddedBatch, Tensor], batch_idx: int, *args, **kwargs):
         if not self.trainer:
             raise ValueError("No trainer!")
 
-
-        loss, (mcc_loss, amount_loss), (f1_mcc, r2_amount) = self._all_forward_step(
+        loss, (mcc_loss, amount_loss), (auc_mcc, r2_amount) = self._all_forward_step(
             batch
         )
         
-        self.log(f"{stage}_loss", loss, prog_bar=True, on_step=True)
-        self.log(f"{stage}_loss_mcc", mcc_loss, on_step=True, prog_bar=False)
-        self.log(f"{stage}_loss_amt", amount_loss, on_step=True, prog_bar=False)
+        self.log(f"{stage}_loss", loss.detach().cpu(), on_step=True, prog_bar=True, on_epoch=False)
+        self.log(f"{stage}_loss_mcc", mcc_loss.detach().cpu(), on_step=True, prog_bar=False, on_epoch=False)
+        self.log(f"{stage}_loss_amt", amount_loss.detach().cpu(), on_step=True, prog_bar=False, on_epoch=False)
 
-        self.log(f"{stage}_mcc_f1", f1_mcc, on_step=False, on_epoch=True)
+        self.log(f"{stage}_mcc_auc", auc_mcc, on_step=False, on_epoch=True)
         self.log(f"{stage}_amt_r2", r2_amount, on_step=False, on_epoch=True)
 
         return loss
@@ -148,7 +147,5 @@ class VanillaAE(AbsAE):
             self.lr,
             weight_decay=self.weight_decay,
         )
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            opt, "min", 1e-1, 2, verbose=True
-        )
-        return [opt], [{"scheduler": scheduler, "monitor": "val_loss"}]
+        
+        return opt

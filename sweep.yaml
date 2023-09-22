@@ -1,12 +1,14 @@
 program: main.py
 method: grid
 metric:
-  name: val_mcc_f1
-  goal: maximize
+  name: val_loss
+  goal: minimize
 parameters:
-  autoencoder.loss_weights.mcc: 
-    values: [1, 10, 100]
-  autoencoder.learning_params.lr: 
+  trainer_args.accumulate_grad_batches: 
+    values: [1, 4]
+  trainer_args.gradient_clip_val:
+    values: [0., 1.]
+  module.lr:
     values: [0.001, 0.0001]
 command:
   - ${env}

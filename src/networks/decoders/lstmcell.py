@@ -8,9 +8,19 @@ class LSTMCellDecoder(AbsDecoder):
         self,
         input_size: int,
         hidden_size: int,
+        num_layers: int = 1,
+        proj_size: int = 0
     ) -> None:
         super().__init__()
-        self.cell = nn.LSTMCell(input_size, hidden_size)
+        self.cell = nn.LSTMCell(hidden_size, hidden_size)
+        self.projector = nn.Linear(hidden_size, input_size)
+        self.lstm = nn.LSTM(
+            input_size=hidden_size, 
+            hidden_size=hidden_size,
+            proj_size=proj_size,
+            num_layers=num_layers - 1
+        ) if num_layers > 1 else nn.Identity()
+        
         self.output_size = hidden_size
         
     def forward(self, input: Tensor, L: int, hx: Optional[Tuple[Tensor, Tensor]] = None) -> Tensor:
@@ -21,7 +31,7 @@ class LSTMCellDecoder(AbsDecoder):
         for _ in range(L):
             hidden_state, cell_state = self.cell(input, (hidden_state, cell_state))
             outputs_list.append(input)
-            input = cell_state
+            input = self.projector(hidden_state)
 
-        return torch.stack(outputs_list, dim=1)
+        return self.lstm(torch.stack(outputs_list, dim=1))[0]
     
