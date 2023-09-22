@@ -3,7 +3,9 @@ from pytorch_lightning.utilities.types import STEP_OUTPUT
 
 import torch
 from torch import nn, Tensor
-from torcheval.metrics.functional import multiclass_auroc, multiclass_f1_score, r2_score
+
+from sklearn.metrics import roc_auc_score, f1_score, r2_score
+
 from ptls.data_load import PaddedBatch
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 
@@ -68,29 +70,27 @@ class VanillaAE(AbsAE):
         mask: Tensor,
     ) -> tuple[float, float, float]:
         with torch.no_grad():
-            mcc_orig = mcc_orig[mask].flatten()
+            mcc_orig = mcc_orig[mask]
             mcc_preds = mcc_preds[mask].reshape((*mcc_orig.shape, -1))
-            separate_auroc = multiclass_auroc(
-                mcc_preds,
-                mcc_orig,
-                num_classes=self.mcc_vocab_size + 1,
-                average=None
-            )
-            
-            separate_f1 = multiclass_f1_score(
-                mcc_preds,
-                mcc_orig,
-                num_classes=self.mcc_vocab_size + 1,
-                average=None
-            )
-            
-            present_classes = mcc_orig.unique()
-            
-            mask.squeeze_()
+
+            mcc_orig_np = mcc_orig.detach().cpu().numpy()
+            mcc_preds_np = mcc_preds.detach().cpu().numpy()
+
             return (
-                separate_auroc[present_classes].mean().item(),
-                separate_f1[present_classes].mean().item(),
-                r2_score(amt_value[mask].flatten(), amt_orig[mask].flatten()).item(),
+                roc_auc_score(
+                    mcc_orig_np,
+                    mcc_preds_np,
+                    average="macro",
+                ).item(),
+                f1_score(
+                    mcc_preds_np,
+                    mcc_orig_np.argmax(1),
+                    average="macro",
+                ).item(),
+                r2_score(
+                    amt_value[mask].detach().cpu().numpy(),
+                    amt_orig[mask].detach().cpu().numpy(),
+                ).item(),
             )
 
     def _calculate_losses(
@@ -127,19 +127,27 @@ class VanillaAE(AbsAE):
 
         return (total_loss, (mcc_loss, amount_loss), (auroc_mcc, f1_mcc, r2_amount))
 
-    def _step(self, stage: str, batch: Tuple[PaddedBatch, Tensor], batch_idx: int, *args, **kwargs):
+    def _step(
+        self,
+        stage: str,
+        batch: Tuple[PaddedBatch, Tensor],
+        batch_idx: int,
+        *args,
+        **kwargs,
+    ):
         if not self.trainer:
             raise ValueError("No trainer!")
 
-        loss, (mcc_loss, amount_loss), (auroc_mcc, f1_mcc, r2_amount) = self._all_forward_step(
-            batch
-        )
-        
+        (
+            loss,
+            (mcc_loss, amount_loss),
+            (auroc_mcc, f1_mcc, r2_amount),
+        ) = self._all_forward_step(batch)
+
         log_loss_params: Dict[str, Any] = dict(
-            on_step = (stage == "train"),
-            on_epoch = (stage != "train")
+            on_step=(stage == "train"), on_epoch=(stage != "train")
         )
-        
+
         self.log(f"{stage}_loss", loss.detach().cpu(), prog_bar=True, **log_loss_params)
         self.log(f"{stage}_loss_mcc", mcc_loss.detach().cpu(), **log_loss_params)
         self.log(f"{stage}_loss_amt", amount_loss.detach().cpu(), **log_loss_params)
@@ -152,7 +160,7 @@ class VanillaAE(AbsAE):
 
     def training_step(self, *args, **kwargs) -> STEP_OUTPUT:
         return self._step("train", *args, **kwargs)
-    
+
     def validation_step(self, *args, **kwargs) -> Union[STEP_OUTPUT, None]:
         return self._step("val", *args, **kwargs)
 
@@ -165,9 +173,9 @@ class VanillaAE(AbsAE):
             self.lr,
             weight_decay=self.weight_decay,
         )
-        
+
         lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             opt, mode="min", patience=2, verbose=True
         )
-        
+
         return [opt], {"scheduler": lr_scheduler, "monitor": "val_loss"}
