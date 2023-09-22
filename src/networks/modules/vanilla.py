@@ -153,4 +153,8 @@ class VanillaAE(AbsAE):
             weight_decay=self.weight_decay,
         )
         
-        return opt
+        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            opt, mode="min"
+        )
+        
+        return [opt], {"scheduler": lr_scheduler, "monitor": "val_loss"}

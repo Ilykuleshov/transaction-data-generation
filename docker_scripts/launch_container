@@ -11,5 +11,5 @@ docker run \
  --name "${DOCKER_NAME}.${IMAGE_NAME}" \
  --rm -it --init \
  -v $(cd .. && pwd):/app \
- --gpus "device=2" \
+ --gpus "device=3" \
  "${DOCKER_NAME}/${IMAGE_NAME}" bash
