@@ -1,25 +1,20 @@
 from typing import Dict, List
 
-from omegaconf import DictConfig, OmegaConf
-
-from ptls.frames import PtlsDataModule
-
-from pytorch_lightning import Trainer
-
-from sklearn.model_selection import train_test_split
-from pytorch_lightning.loggers import WandbLogger
-import wandb
 from hydra.utils import instantiate
-
+from omegaconf import DictConfig, OmegaConf
+from ptls.frames import PtlsDataModule
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
+from pytorch_lightning import Trainer
+from pytorch_lightning.loggers import WandbLogger
+from sklearn.model_selection import train_test_split
 
-from src.preprocessing.churn_preproc import preprocessing
+import wandb
+from src.const import PROJECT_NAME
 from src.datamodules.autoencoder.dataset import MyColesDataset
 from src.networks.decoders.base import AbsDecoder
-from src.utils.logging_utils import get_logger
-from src.const import PROJECT_NAME
 from src.networks.modules.base import AbsAE
-
+from src.preprocessing.churn_preproc import preprocessing
+from src.utils.logging_utils import get_logger
 
 logger = get_logger(name=__name__)
 
