@@ -43,7 +43,7 @@ def train_autoencoder(
         mcc_col=mcc_column,
     )
 
-    wandb_logger = WandbLogger(project=PROJECT_NAME, log_model="all")
+    wandb_logger = WandbLogger(project=PROJECT_NAME)
     wandb_logger.experiment.config.update(OmegaConf.to_container(cfg))
 
     trainer = Trainer(

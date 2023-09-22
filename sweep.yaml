@@ -4,12 +4,8 @@ metric:
   name: val_loss
   goal: minimize
 parameters:
-  trainer_args.accumulate_grad_batches: 
-    values: [1, 4]
-  trainer_args.gradient_clip_val:
-    values: [0., 1.]
-  module.lr:
-    values: [0.001, 0.0001]
+  module.unfreeze_enc_after: 
+    values: [5, 10, 15]
 command:
   - ${env}
   - ${interpreter}
