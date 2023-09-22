@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Union
 from pytorch_lightning.utilities.types import STEP_OUTPUT
 
 import torch
@@ -136,10 +136,10 @@ class VanillaAE(AbsAE):
     def training_step(self, *args, **kwargs) -> STEP_OUTPUT:
         return self._step("train", *args, **kwargs)
     
-    def validation_step(self, *args, **kwargs) -> STEP_OUTPUT | None:
+    def validation_step(self, *args, **kwargs) -> Union[STEP_OUTPUT, None]:
         return self._step("val", *args, **kwargs)
 
-    def test_step(self, *args, **kwargs) -> STEP_OUTPUT | None:
+    def test_step(self, *args, **kwargs) -> Union[STEP_OUTPUT, None]:
         return self._step("test", *args, **kwargs)
 
     def configure_optimizers(self):
