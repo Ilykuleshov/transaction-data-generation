@@ -53,8 +53,8 @@ class VanillaAE(AbsAE):
         amount_rec = self.out_amount(seqs_after_lstm)
 
         # zero-out padding to disable grad flow
-        mcc_rec[~batch.seq_len_mask] = 0
-        amount_rec[~batch.seq_len_mask] = 0
+        mcc_rec[~batch.seq_len_mask.bool()] = 0
+        amount_rec[~batch.seq_len_mask.bool()] = 0
 
         # squeeze for amount is required to reduce last dimension
         return (mcc_rec, amount_rec.squeeze(dim=-1))
@@ -68,7 +68,6 @@ class VanillaAE(AbsAE):
         mask: Tensor,
     ) -> tuple[float, float]:
         with torch.no_grad():
-            breakpoint()
             mcc_orig = mcc_orig[mask].flatten()
             mcc_preds = mcc_preds[mask].reshape((*mcc_orig.shape, -1))
 
@@ -111,7 +110,7 @@ class VanillaAE(AbsAE):
         )
 
         f1_mcc, r2_amount = self._calculate_metrics(
-            mcc_rec, amount_rec, mcc_orig, amount_orig, padded_batch.seq_len_mask
+            mcc_rec, amount_rec, mcc_orig, amount_orig, padded_batch.seq_len_mask.bool()
         )
 
         return (total_loss, (mcc_loss, amount_loss), (f1_mcc, r2_amount))
