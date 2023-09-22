@@ -59,12 +59,16 @@ class AbsAE(LightningModule):
             logger.info("Freezing decoder weights")
             self.decoder.requires_grad_(False)
 
-    def forward(self, x: Union[Tensor, PaddedBatch]) -> Any:
-        embeddings = self.encoder(x)
+    def forward(self, x: PaddedBatch) -> Any:
+        embeddings: Union[PaddedBatch, Tensor] = self.encoder(x)
         if isinstance(embeddings, PaddedBatch):
-            embeddings = embeddings.payload
-
-        return self.decoder(embeddings)
+            return self.decoder(embeddings.payload)
+        elif embeddings.ndim == 3:
+            return self.decoder(embeddings)
+        elif embeddings.ndim == 2:
+            return self.decoder(embeddings, x.seq_feature_shape[1])
+        else:
+            raise ValueError(f"")
 
     def on_train_epoch_start(self) -> None:
         if self.unfreeze_enc_after and self.current_epoch == self.unfreeze_enc_after:
