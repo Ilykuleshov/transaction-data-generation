@@ -154,7 +154,7 @@ class VanillaAE(AbsAE):
         )
         
         lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            opt, mode="min"
+            opt, mode="min", patience=2, verbose=True
         )
         
         return [opt], {"scheduler": lr_scheduler, "monitor": "val_loss"}
