@@ -3,7 +3,7 @@ from pytorch_lightning.utilities.types import STEP_OUTPUT
 
 import torch
 from torch import nn, Tensor
-from torcheval.metrics.functional import multiclass_auroc, multiclass_f1_score, r2_score
+from torcheval.metrics.functional import multiclass_auroc, r2_score
 from ptls.data_load import PaddedBatch
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 
@@ -73,7 +73,7 @@ class VanillaAE(AbsAE):
 
             mask.squeeze_()
             return (
-                multiclass_f1_score(
+                multiclass_auroc(
                     mcc_preds,
                     mcc_orig,
                     num_classes=self.mcc_vocab_size + 1,
@@ -109,17 +109,17 @@ class VanillaAE(AbsAE):
             mcc_rec, amount_rec, mcc_orig, amount_orig
         )
 
-        f1_mcc, r2_amount = self._calculate_metrics(
+        auroc_mcc, r2_amount = self._calculate_metrics(
             mcc_rec, amount_rec, mcc_orig, amount_orig, padded_batch.seq_len_mask.bool()
         )
 
-        return (total_loss, (mcc_loss, amount_loss), (f1_mcc, r2_amount))
+        return (total_loss, (mcc_loss, amount_loss), (auroc_mcc, r2_amount))
 
     def _step(self, stage: str, batch: Tuple[PaddedBatch, Tensor], batch_idx: int, *args, **kwargs):
         if not self.trainer:
             raise ValueError("No trainer!")
 
-        loss, (mcc_loss, amount_loss), (f1_mcc, r2_amount) = self._all_forward_step(
+        loss, (mcc_loss, amount_loss), (auroc_mcc, r2_amount) = self._all_forward_step(
             batch
         )
         
@@ -132,7 +132,7 @@ class VanillaAE(AbsAE):
         self.log(f"{stage}_loss_mcc", mcc_loss.detach().cpu(), **log_loss_params)
         self.log(f"{stage}_loss_amt", amount_loss.detach().cpu(), **log_loss_params)
 
-        self.log(f"{stage}_mcc_f1", f1_mcc, on_step=False, on_epoch=True)
+        self.log(f"{stage}_mcc_auroc", auroc_mcc, on_step=False, on_epoch=True)
         self.log(f"{stage}_amt_r2", r2_amount, on_step=False, on_epoch=True)
 
         return loss
