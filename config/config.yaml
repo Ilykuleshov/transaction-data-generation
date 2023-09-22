@@ -3,6 +3,7 @@ defaults:
   - encoder: coles_pretrained
   - decoder: lstm
   - module: vanilla
+  - _self_
 
 trainer_args:
   max_epochs: 50
