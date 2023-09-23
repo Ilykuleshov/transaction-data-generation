@@ -1,7 +1,7 @@
 defaults:
   - dataset: churn
   - encoder: coles_pretrained
-  - decoder: lstm
+  - decoder: lstmcell
   - module: vanilla
   - _self_
 
