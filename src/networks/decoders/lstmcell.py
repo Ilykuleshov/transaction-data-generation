@@ -13,7 +13,11 @@ class LSTMCellDecoder(AbsDecoder):
     ) -> None:
         super().__init__()
         self.cell = nn.LSTMCell(input_size, hidden_size)
-        self.projector = nn.Linear(hidden_size, input_size)
+        self.projector = nn.Sequential(
+            nn.Linear(hidden_size, input_size),
+            nn.ReLU()
+        )
+
         self.lstm = nn.LSTM(
             input_size=hidden_size, 
             hidden_size=hidden_size,
@@ -35,5 +39,7 @@ class LSTMCellDecoder(AbsDecoder):
             outputs_list.append(hidden_state)
             input = self.projector(hidden_state)
 
-        return self.lstm(torch.stack(outputs_list, dim=1))[0]
+        outputs_list.reverse()
+        lstmcell_outputs = torch.relu(torch.stack(outputs_list, dim=1))
+        return self.lstm(lstmcell_outputs)[0]
     
