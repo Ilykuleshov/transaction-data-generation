@@ -1,4 +1,6 @@
-from typing import Any, Optional, Union
+from typing import Any, Dict, Optional, Union
+from omegaconf import DictConfig, OmegaConf
+from hydra.utils import instantiate
 
 
 from pytorch_lightning import LightningModule
@@ -24,8 +26,7 @@ class AbsAE(LightningModule):
         amnt_col: str,
         mcc_col: str,
         mcc_vocab_size: int,
-        lr: float,
-        weight_decay: float,
+        optimizer_config: DictConfig,
         encoder_weights: Optional[str] = "",
         decoder_weights: Optional[str] = "",
         unfreeze_enc_after: Optional[int] = 0,
@@ -36,11 +37,11 @@ class AbsAE(LightningModule):
         self.amnt_col = amnt_col
         self.mcc_col = mcc_col
         self.mcc_vocab_size = mcc_vocab_size
-        self.lr = lr
-        self.weight_decay = weight_decay
         self.unfreeze_enc_after = unfreeze_enc_after
         self.unfreeze_dec_after = unfreeze_dec_after
         self.ae_output_size = decoder.output_size
+        self.optimizer_config = optimizer_config  # type: ignore
+        self.lr = optimizer_config["optimizer"]["lr"]
 
         if encoder_weights:
             encoder.load_state_dict(torch.load(encoder_weights))
@@ -82,10 +83,15 @@ class AbsAE(LightningModule):
         return super().on_train_epoch_start()
 
     def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(
-            self.parameters(),
-            self.lr,
-            weight_decay=self.weight_decay,
+        cnf: Dict = instantiate(self.optimizer_config, _convert_="all")
+        cnf["optimizer"] = cnf["optimizer"](
+            lr=self.lr, params=self.parameters()
         )
 
-        return optimizer
+        if (scheduler := cnf.get("lr_scheduler", None)):
+            if isinstance(scheduler, dict):
+                scheduler["scheduler"] = scheduler["scheduler"](optimizer=cnf["optimizer"])
+            else:
+                cnf["lr_scheduler"] = scheduler(optimizer=cnf["optimizer"])
+
+        return cnf

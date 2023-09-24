@@ -4,7 +4,15 @@ loss_weights:
   mcc: 1
   amount: 1
 encoder_weights: weights/coles_best_state_dict.pth
-unfreeze_enc_after: 5
-lr: .0001
-weight_decay: 0.00005
 mcc_vocab_size: 344
+optimizer_config:
+  optimizer:
+    _target_: torch.optim.AdamW
+    _partial_: True
+    lr: .01
+  lr_scheduler:
+    _target_: torch.optim.lr_scheduler.CyclicLR
+    _partial_: True
+    base_lr: .0001
+    max_lr: 0.01
+    cycle_momentum: False

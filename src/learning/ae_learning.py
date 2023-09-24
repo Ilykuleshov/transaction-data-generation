@@ -5,6 +5,7 @@ from omegaconf import DictConfig, OmegaConf
 from ptls.frames import PtlsDataModule
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 from pytorch_lightning import Trainer
+from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
 from sklearn.model_selection import train_test_split
 
@@ -36,7 +37,7 @@ def train_autoencoder(
 
     encoder: SeqEncoderContainer = instantiate(cfg["encoder"])
     decoder: AbsDecoder = instantiate(cfg["decoder"])
-    module: AbsAE = instantiate(cfg["module"])(
+    module: AbsAE = instantiate(cfg["module"], _recursive_=False)(
         encoder=encoder,
         decoder=decoder,
         amnt_col=amt_column,
@@ -51,6 +52,7 @@ def train_autoencoder(
         devices=1,
         logger=wandb_logger,
         log_every_n_steps=10,
+        callbacks=[LearningRateMonitor()],
         **cfg["trainer_args"],
     )
 

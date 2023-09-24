@@ -171,16 +171,3 @@ class VanillaAE(AbsAE):
 
     def test_step(self, *args, **kwargs) -> Union[STEP_OUTPUT, None]:
         return self._step("test", *args, **kwargs)
-
-    def configure_optimizers(self):
-        opt = torch.optim.AdamW(
-            self.parameters(),
-            self.lr,
-            weight_decay=self.weight_decay,
-        )
-
-        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            opt, mode="min", patience=2, verbose=True
-        )
-
-        return [opt], {"scheduler": lr_scheduler, "monitor": "val_loss"}
