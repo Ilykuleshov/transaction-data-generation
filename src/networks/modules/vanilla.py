@@ -69,7 +69,7 @@ class VanillaAE(AbsAE):
         mcc_orig: Tensor,
         amt_orig: Tensor,
         mask: Tensor,
-    ) -> tuple[float, float, float]:
+    ) -> tuple[Tensor, Tensor, Tensor]:
         with torch.no_grad():
             mcc_orig = mcc_orig[mask]
             mcc_preds = mcc_preds[mask].reshape((*mcc_orig.shape, -1))
@@ -85,17 +85,17 @@ class VanillaAE(AbsAE):
                     mcc_orig,
                     average="macro",
                     num_classes=num_classes
-                ).item(),
+                ).cpu(),
                 multiclass_f1_score(
                     mcc_preds,
                     mcc_orig,
                     average="macro",
                     num_classes=num_classes
-                ).item(),
+                ).cpu(),
                 r2_score(
                     amt_value[mask],
                     amt_orig[mask],
-                ).item(),
+                ).cpu(),
             )
 
     def _calculate_losses(
@@ -116,18 +116,17 @@ class VanillaAE(AbsAE):
 
         return (total_loss, (mcc_loss, amount_loss))
 
-    def _all_forward_step(self, batch: Tuple[PaddedBatch, Tensor]):
-        padded_batch = batch[0]
-        mcc_rec, amount_rec = self(padded_batch)  # (B * S, L, MCC_N), (B * S, L)
-        mcc_orig = padded_batch.payload["mcc_code"]
-        amount_orig = padded_batch.payload["amount"]
+    def _all_forward_step(self, batch: PaddedBatch):
+        mcc_rec, amount_rec = self(batch)  # (B * S, L, MCC_N), (B * S, L)
+        mcc_orig = batch.payload["mcc_code"]
+        amount_orig = batch.payload["amount"]
 
         total_loss, (mcc_loss, amount_loss) = self._calculate_losses(
             mcc_rec, amount_rec, mcc_orig, amount_orig
         )
 
         auroc_mcc, f1_mcc, r2_amount = self._calculate_metrics(
-            mcc_rec, amount_rec, mcc_orig, amount_orig, padded_batch.seq_len_mask.bool()
+            mcc_rec, amount_rec, mcc_orig, amount_orig, batch.seq_len_mask.bool()
         )
 
         return (total_loss, (mcc_loss, amount_loss), (auroc_mcc, f1_mcc, r2_amount))
@@ -135,7 +134,7 @@ class VanillaAE(AbsAE):
     def _step(
         self,
         stage: str,
-        batch: Tuple[PaddedBatch, Tensor],
+        batch: PaddedBatch,
         batch_idx: int,
         *args,
         **kwargs,
@@ -150,16 +149,20 @@ class VanillaAE(AbsAE):
         ) = self._all_forward_step(batch)
 
         log_loss_params: Dict[str, Any] = dict(
-            on_step=(stage == "train"), on_epoch=(stage != "train")
+            on_step=(stage == "train"), on_epoch=(stage != "train"), batch_size=batch.seq_feature_shape[0]
+        )
+        
+        log_metric_params: Dict[str, Any] = dict(
+            on_step=False, on_epoch=True, batch_size=batch.seq_feature_shape[0]
         )
 
         self.log(f"{stage}_loss", loss.detach().cpu(), prog_bar=True, **log_loss_params)
         self.log(f"{stage}_loss_mcc", mcc_loss.detach().cpu(), **log_loss_params)
         self.log(f"{stage}_loss_amt", amount_loss.detach().cpu(), **log_loss_params)
-
-        self.log(f"{stage}_mcc_auroc", auroc_mcc, on_step=False, on_epoch=True)
-        self.log(f"{stage}_mcc_f1", f1_mcc, on_step=False, on_epoch=True)
-        self.log(f"{stage}_amt_r2", r2_amount, on_step=False, on_epoch=True)
+        
+        self.log(f"{stage}_mcc_auroc", auroc_mcc, **log_metric_params)
+        self.log(f"{stage}_mcc_f1", f1_mcc, **log_metric_params)
+        self.log(f"{stage}_amt_r2", r2_amount, **log_metric_params)
 
         return loss
 
@@ -171,3 +174,15 @@ class VanillaAE(AbsAE):
 
     def test_step(self, *args, **kwargs) -> Union[STEP_OUTPUT, None]:
         return self._step("test", *args, **kwargs)
+    
+    def predict_step(self, batch: PaddedBatch, batch_idx: int, dataloader_idx: int = 0) -> Any:
+        mcc_rec: Tensor # (B, L, MCC_NUM)
+        amount_rec: Tensor # (B, L)
+        mcc_rec, amount_rec = self(batch)
+        lens_mask = batch.seq_len_mask.bool()
+        lens = batch.seq_lens
+    
+        mcc_rec_trim = mcc_rec[lens_mask]
+        amount_rec_trim = amount_rec[lens_mask]
+        
+        return mcc_rec_trim.split(lens), amount_rec_trim.split(lens)

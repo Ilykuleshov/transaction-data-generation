@@ -4,8 +4,10 @@ metric:
   name: val_loss
   goal: minimize
 parameters:
-  module.unfreeze_enc_after: 
-    values: [5, 10, 15]
+  module: 
+    values: ["vanilla_baseline", "vanilla_pretrained", "vanilla_frozen"]
+  dataset.n_mccs_keep:
+      values: [344, 100]
 command:
   - ${env}
   - ${interpreter}

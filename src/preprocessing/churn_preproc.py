@@ -12,6 +12,7 @@ from src.utils.logging_utils import get_logger
 from src.utils.data_utils import split_into_samples
 from src.anomaly_scheme import by_mcc_percentiles
 from ptls.preprocessing import PandasDataPreprocessor
+from ptls.preprocessing.pandas.frequency_encoder import FrequencyEncoder
 
 
 logger = get_logger(name=__name__)
@@ -24,11 +25,12 @@ def preprocessing(cfg: DictConfig) -> tp.List[tp.Dict]:
 
     mcc_column: str = cfg["mcc_column"]
     amt_column: str = cfg["amt_column"]
+    n_mccs_keep = cfg.get("n_mccs_keep", 344)
 
     if ignore_existing_preproc:
         logger.info("Preprocessing will ignore all previously saved files")
 
-    preproc_df_path = dir_path / "preproc_df.parquet"
+    preproc_df_path = dir_path / ("preproc_df_mcc" + str(n_mccs_keep) + ".parquet")
     if not ignore_existing_preproc and preproc_df_path.exists():
         df = pd.read_parquet(preproc_df_path)
     else:
@@ -49,6 +51,12 @@ def preprocessing(cfg: DictConfig) -> tp.List[tp.Dict]:
         df = df[df["amount"] < amount_quantile_val]
         logger.info("Done!")
 
+        logger.info(f"Frequency encoding mccs & keeping {n_mccs_keep} most common")
+        df = FrequencyEncoder("MCC").fit_transform(df) # type: ignore
+        common_mccs_df = df[df["MCC"] <= n_mccs_keep]
+        logger.info(f"Done! Dataset size {len(df)} -> {len(common_mccs_df)}")
+        df = common_mccs_df
+        
         df.drop(
             columns=["channel_type", "PERIOD", "currency", "trx_category", "target_flag", "target_sum"],
             inplace=True
@@ -65,15 +73,16 @@ def preprocessing(cfg: DictConfig) -> tp.List[tp.Dict]:
             "TRDATETIME",
             cols_category=[mcc_column],
             cols_numerical=[amt_column],
-            return_records=True,
+            return_records=False,
+            category_transformation='none'
         )  # type: ignore
 
         logger.info("Fitting Pandas preprocessor")
-        dataset: tp.List[tp.Dict] = preprocessor.fit_transform(df)  # type: ignore
+        df: pd.DataFrame = preprocessor.fit_transform(df)  # type: ignore
         with open(preprocessor_path, "wb") as f:
             pickle.dump(preprocessor, f)
     else:
         with open(preprocessor_path, "rb") as f:
-            dataset = pickle.load(f).transform(df)
+            df = pickle.load(f).transform(df)
 
-    return dataset
+    return df.to_dict(orient='records')
